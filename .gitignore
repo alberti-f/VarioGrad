@@ -13,3 +13,9 @@ output/
 # Ignore temporary notebook files
 .ipynb_checkpoints/
 *.ipynb
+
+# Ignore this file
+.gitignore
+
+# Ignore cluster simulator
+run_analyses.sh
