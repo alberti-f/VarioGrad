@@ -1,0 +1,5 @@
+work_dir=/home/fralberti/Code/VarioGrad
+group_dir=/home/fralberti/Data/HCP_1200/HCP_S1200_GroupAvg_v1
+subj_dir=/home/fralberti/Data/HCP_1200/Subjects
+output_dir=/home/fralberti/Code/VarioGrad/output
+subj_list=/home/fralberti/Data/HCP_1200/Subjects/subj_IDs_tmp.txt

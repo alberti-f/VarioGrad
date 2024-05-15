@@ -1,0 +1,6 @@
+# requirements
+
+nibabel==4.0.2
+hcp_utils==0.1.0
+numpy==1.22.3
+sys==3.9.16
