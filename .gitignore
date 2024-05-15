@@ -14,8 +14,8 @@ output/
 .ipynb_checkpoints/
 *.ipynb
 
-# Ignore this file
-.gitignore
-
 # Ignore cluster simulator
 run_analyses.sh
+
+# Ignore local directories
+variograd_utils/directories.txt
