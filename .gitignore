@@ -9,6 +9,7 @@ __pycache__/
 
 # Ignore output files
 output/
+output_cluster/
 
 # Ignore temporary notebook files
 .ipynb_checkpoints/
@@ -19,3 +20,6 @@ run_analyses.sh
 
 # Ignore local paths file
 variograd_utils/directories.txt
+
+# Ignore subject pairs file
+subject_pairs.txt
