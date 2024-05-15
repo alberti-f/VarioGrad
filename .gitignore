@@ -1,0 +1,15 @@
+# Ignore log files
+*.log
+
+# Ignore cache files
+__pycache__/
+
+# Ignore temporary files
+*.tmp
+
+# Ignore output files
+output/
+
+# Ignore temporary notebook files
+.ipynb_checkpoints/
+*.ipynb
