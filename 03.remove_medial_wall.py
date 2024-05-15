@@ -24,15 +24,26 @@ from variograd_utils import *
 import nibabel as nib
 import surfdist as sd 
 import sys
+import os
 
 index = int(sys.argv[1])-1
 
 data = dataset()
-data.generate_avg_surf("L", 10)
-data.generate_avg_surf("R", 10)
-data.__init__()
+ID = data.subj_list[index]
 
-ID = data.subj_list[index] 
+surf_exists = [os.path.exists( 
+                f"{data.output_dir}/{id}/T1w/fsaverage_LR10k/{id}.{H}.midthickness_MSMAll.10k_fs_LR.surf.gii") 
+                for H in ["L", "R"] 
+                for id in data.subj_list]
+
+
+if all(surf_exists) and not os.path.exists(f"{data.mesh10k_dir}/{data.id}.L.midthickness_MSMAll.10k_fs_LR.surf.gii"):
+    print("\n\nAll individual sufaces already exist. \nGenerating average group surface.")
+    data.generate_avg_surf("L", 10)
+    data.generate_avg_surf("R", 10)
+    data.__init__()
+
+ 
 
 for H in ["L", "R"]:
     surf_path = getattr(data, f"{H}_midthickness_10k")
@@ -40,7 +51,7 @@ for H in ["L", "R"]:
     cortex_idx = vertex_info_10k[f"gray{H.lower()}"]
     cortex_surf = sd.utils.surf_keep_cortex(full_surf, cortex=cortex_idx)
     structure = ["CORTEX_LEFT" if H=="L" else "CORTEX_RIGHT"][0]
-    filename = data.group_dir+f"/10k_fs_LR/{data.id}.{H}.cortex_midthickness_MSMAll.10k_fs_LR.surf.gii"
+    filename = f"{data.mesh10k_dir}/{data.id}.{H}.cortex_midthickness_MSMAll.10k_fs_LR.surf.gii"
     save_gifti(darrays=cortex_surf, intents=[1008, 1009], dtypes=["NIFTI_TYPE_FLOAT32","NIFTI_TYPE_INT32"], 
             filename=filename, structure=structure)
 

@@ -1,34 +1,34 @@
 #!/bin/bash
 
-"""
-Downsample individual midthickness surfaces from 32k to 10k vertices
 
-The script uses the workbench command line tool to downsample the midthickness
-surface of each hemisphere from 32k to 10k vertices. The output is saved in the
-T1w/fsaverage_LR10k directory of each subject. The script is designed to be run
-on a cluster as array job. The script requires the set_directories.sh script to 
-be run first to set the necessary directories. The <index> argument is used to 
-select a subject from the subject list file.
-
-Parameters:
-<index>: Integer
-    Index of the subject in the subject list file
-    specified in the directories.txt file
-
-Note:
-    The downsampling uses sphere meshes from the fsaverage_LR32k and fsaverage_LR10k
-    provided by Xu et al.(2020) at:
-    https://github.com/TingsterX/alignment_macaque-human/trunk/surfaces/Human/10k_fs_LR
-    The mesh10k_dir variable in the directories.txt file should point to this directory.
-"""
-
+if [ $# -eq 0 ]; then
+    echo "Downsample individual midthickness surfaces from 32k to 10k vertices"
+    echo "The script uses the workbench command line tool to downsample the midthickness"
+    echo "surface of each hemisphere from 32k to 10k vertices. The output is saved in the"
+    echo "T1w/fsaverage_LR10k directory of each subject. The script is designed to be run"
+    echo "on a cluster as array job. The script requires the set_directories.sh script to"
+    echo "be run first to set the necessary directories. The <index> argument is used to"
+    echo "select a subject from the subject list file."
+    echo ""
+    echo "Parameters:"
+    echo "<index>: Integer"
+    echo "    Index of the subject in the subject list file"
+    echo "    specified in the directories.txt file"
+    echo ""
+    echo "Note:"
+    echo "    The downsampling uses sphere meshes from the fsaverage_LR32k and fsaverage_LR10k"
+    echo "    provided by Xu et al.(2020) at:"
+    echo "    https://github.com/TingsterX/alignment_macaque-human/trunk/surfaces/Human/10k_fs_LR"
+    echo "    The mesh10k_dir variable in the directories.txt file should point to this directory."
+    exit 1
+fi
 
 
 source ./variograd_utils/directories.txt
 
 subject=$(sed -n "${1}p" $subj_list)
 
-if [ ! -d "${output_dir}/${subject}/T1w/fsaverage_LR10k" ]; then mkdir "${output_dir}/${subject}/T1w/fsaverage_LR10k"; fi
+if [ ! -d "${output_dir}/${subject}/T1w/fsaverage_LR10k" ]; then mkdir -p "${output_dir}/${subject}/T1w/fsaverage_LR10k"; fi
 
 for H in "L" "R";do
 

@@ -26,7 +26,7 @@ output_dir = data.output_dir
 
 # set formattable paths
 mask32k_path = output_dir + "/S1200.{0}.CortexMask.32k_fs_LR.shape.gii"
-mask10k_path = mesh10k_dir + "/S1200.{0}.CortexMask.10k_fs_LR.shape.gii"
+mask10k_path = output_dir + "/S1200.{0}.CortexMask.10k_fs_LR.shape.gii"
 sphere32k_path = group_dir + "/S1200.{0}.sphere.32k_fs_LR.surf.gii"
 sphere10k_path = mesh10k_dir + "/S1200.{0}.sphere.10k_fs_LR.surf.gii"
 
@@ -64,7 +64,7 @@ command = f"\
 vinfo = {}
 run(command, shell=True)
 for h in ["L", "R"]:
-    mask = load(f"{mesh_10k}/S1200.{h}.CortexMask.10k_fs_LR.shape.gii").darrays[0].data.astype("bool")
+    mask = load(f"{data.output_dir}/S1200.{h}.CortexMask.10k_fs_LR.shape.gii").darrays[0].data.astype("bool")
     vinfo[f"num_mesh{h.lower()}"] = len(mask)
     vinfo[f"gray{h.lower()}"] = np.arange(len(mask))[mask]
     vinfo[f"offset{h.lower()}"] = len(mask)*(h=="R")
