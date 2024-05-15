@@ -17,3 +17,5 @@ output/
 # Ignore cluster simulator
 run_analyses.sh
 
+# Ignore local paths file
+variograd_utils/directories.txt
