@@ -13,3 +13,9 @@ output/
 # Ignore temporary notebook files
 .ipynb_checkpoints/
 *.ipynb
+
+# Ignore cluster simulator
+run_analyses.sh
+
+# Ignore local paths file
+variograd_utils/directories.txt
