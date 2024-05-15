@@ -42,10 +42,9 @@ class dataset:
             if k==32:
                 path = f"{self.group_dir}/{self.id}.{h}.{name}_MSMAll.{k}k_fs_LR.surf.gii"
             elif k==10:
-                path = f"{self.group_dir}/10k_fs_LR/{self.id}.{h}.{name}_MSMAll.{k}k_fs_LR.surf.gii"
+                path = f"{self.mesh10k_dir}/{self.id}.{h}.{name}_MSMAll.{k}k_fs_LR.surf.gii"
 
-            if os.exists(path):
-                setattr(self, f"{h}_{name}_{k}k",  path)
+            setattr(self, f"{h}_{name}_{k}k",  path)
 
 
     def outpath(self, filename, replace=True):
@@ -60,7 +59,7 @@ class dataset:
         if k==32:
             surf = nib.load(f"{self.group_dir}/{self.id}.{h}.{type}_MSMAll.{k}k_fs_LR.surf.gii")
         elif k==10:
-            surf = nib.load(f"{self.group_dir}/10k_fs_LR/{self.id}.{h}.{type}_MSMAll.{k}k_fs_LR.surf.gii")
+            surf = nib.load(f"{self.mesh10k_dir}/10k_fs_LR/{self.id}.{h}.{type}_MSMAll.{k}k_fs_LR.surf.gii")
         
         if assign:
             return surf
@@ -118,8 +117,7 @@ class dataset:
         if save:
             structure = ["CORTEX_LEFT" if h=="L" else "CORTEX_RIGHT"][0]
             if filename is None:
-                dir10k = ["/10k_fs_LR" if k==10 else ""][0]
-                filename = self.group_dir + f"{dir10k}/{self.id}.{h}.midthickness_MSMAll.{k}k_fs_LR.surf.gii"
+                filename = f"{self.mesh10k_dir}/{self.id}.{h}.midthickness_MSMAll.{k}k_fs_LR.surf.gii"
 
             save_gifti(darrays=avg_surf, intents=[1008, 1009], dtypes=["NIFTI_TYPE_FLOAT32","NIFTI_TYPE_INT32"], 
                     filename=filename, structure=structure)
@@ -156,7 +154,6 @@ class dataset:
         
 class subject:
 
-
     def __init__(self, ID=None):
         data = dataset()
         self.id = ID
@@ -167,13 +164,16 @@ class subject:
                              dtype="object").T.reshape(-1, 4)
         for h, k, w, name in surf_args:
             path = f"{self.dir}/{w}/fsaverage_LR{k}k/{self.id}.{h}.{name}_MSMAll.{k}k_fs_LR.surf.gii"
-
+            if os.exists(path):
+                setattr(self, f"{h}_{name}_{k}k_{w}",  path)
+                
+            path = self.outpath(f"{w}/fsaverage_LR{k}k/{self.id}.{h}.{name}_MSMAll.{k}k_fs_LR.surf.gii")
             if os.exists(path):
                 setattr(self, f"{h}_{name}_{k}k_{w}",  path)
             
 
     def outpath(self, filename, replace=True):
-        filename = f"{self.dir}/{filename}"
+        filename = f"{dataset().output_dir}/{self.id}/{filename}"
         if os.exists(filename) & ~replace:
             raise ValueError("This file already exists. Change 'filename' or set 'replace' to True")
         return filename
