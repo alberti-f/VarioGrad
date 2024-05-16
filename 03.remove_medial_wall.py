@@ -31,18 +31,6 @@ index = int(sys.argv[1])-1
 data = dataset()
 ID = data.subj_list[index]
 
-surf_exists = [os.path.exists( 
-                f"{data.output_dir}/{id}/T1w/fsaverage_LR10k/{id}.{H}.midthickness_MSMAll.10k_fs_LR.surf.gii") 
-                for H in ["L", "R"] 
-                for id in data.subj_list]
-
-
-if all(surf_exists) and not os.path.exists(f"{data.mesh10k_dir}/{data.id}.L.midthickness_MSMAll.10k_fs_LR.surf.gii"):
-    print("\n\nAll individual sufaces already exist. \nGenerating average group surface.")
-    data.generate_avg_surf("L", 10)
-    data.generate_avg_surf("R", 10)
-    data.__init__()
-
  
 
 for H in ["L", "R"]:
