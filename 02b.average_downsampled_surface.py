@@ -2,7 +2,6 @@ from variograd_utils import *
 from os.path import exists
 from subprocess import run
 import nibabel as nib
-import sys
 
 
 # Generate average surface
