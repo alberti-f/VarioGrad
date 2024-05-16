@@ -59,7 +59,7 @@ class dataset:
         if k==32:
             surf = nib.load(f"{self.group_dir}/{self.id}.{h}.{type}_MSMAll.{k}k_fs_LR.surf.gii")
         elif k==10:
-            surf = nib.load(f"{self.mesh10k_dir}/10k_fs_LR/{self.id}.{h}.{type}_MSMAll.{k}k_fs_LR.surf.gii")
+            surf = nib.load(f"{self.mesh10k_dir}/{self.id}.{h}.{type}_MSMAll.{k}k_fs_LR.surf.gii")
         
         if assign:
             return surf
@@ -181,7 +181,7 @@ class subject:
 
     def load_surf(self, h, k=32, MNINonLinear=False, type="midthickness", assign=True):
         wrap = ["MNINonLinear" if MNINonLinear else "T1w"][0]
-        surf = nib.load(f"{self.dir}/{wrap}/fsaverage_LR{k}k/{self.id}.{h}.{type}_MSMAll.{k}k_fs_LR.surf.gii")
+        surf = nib.load(getattr(self, f"{h}_{type}_{k}k_{wrap}"))
         
         if assign:
             return surf
