@@ -8,7 +8,7 @@ import gc
 
 n_components = 10
 data = dataset()
-msize = [1500]
+msize = [500]
 affinity = ["Gauss", "linear"]
 scale = np.arange(50, 201, 50, dtype="float32")
 hemi = ["L", "R"]
