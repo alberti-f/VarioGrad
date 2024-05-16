@@ -24,7 +24,6 @@ from variograd_utils import *
 import nibabel as nib
 import surfdist as sd 
 import sys
-import os
 
 index = int(sys.argv[1])-1
 
