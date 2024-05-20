@@ -4,87 +4,33 @@ import numpy as np
 from variograd_utils import *
 from itertools import combinations
 from sklearn.metrics.pairwise import euclidean_distances
-from os.path import exists
-import sys
-# import portalocker
-
-# ###############################################
-# def edit_npy_file_row(filename, row_index, new_data):
-#     with open(filename, 'r+b') as f:
-#         # Lock the file for writing
-#         portalocker.lock(f, portalocker.LOCK_EX)
-
-#         try:
-#             # Memory-map the .npy file
-#             mmapped_array = np.load(f, mmap_mode='r+')
-
-#             # Modify the specific row
-#             mmapped_array[row_index] = new_data
-
-#             # Ensure changes are written (optional, usually handled by the OS)
-#             mmapped_array.flush()
-
-#         finally:
-#             # Unlock the file
-#             portalocker.unlock(f)
-# ###############################################
-
-
-
-
-index = int(sys.argv[1]) - 1
+from joblib import Parallel, delayed
 
 data =  dataset()
-
-if not exists(data.outpath("subject_pairs.txt")):
-    subj_pairs = list(combinations(range(data.N), 2))
-    np.savetxt(data.outpath("subject_pairs.txt"), subj_pairs, fmt="%d")
+data.subj_list = data.subj_list
+n_subj = data.N
 
 
-subj_pairs = np.loadtxt(data.outpath("subject_pairs.txt")).astype(int)
-n_pairs = len(list(subj_pairs))
+subj_pairs = list(combinations(range(n_subj), 2))
+subj_pairs = data.subj_list[subj_pairs]
+
+np.print(f"\n\nComputing the inter-subject similarity of vertex geodesic 
+         distance profile for {len(subj_pairs)} subject pairs \n")
 
 
-if not exists(data.outpath("AllToAll.L.gdist_L2.npy")):
-    gdist_L2_l = np.zeros([vertex_info_10k.grayl.size, n_pairs])
-    np.save(data.outpath("AllToAll.L.gdist_L2.npy"), gdist_L2_l)
-
-if not exists(data.outpath("AllToAll.R.gdist_L2.npy")):
-    gdist_L2_r = np.zeros([vertex_info_10k.grayr.size, n_pairs])
-    np.save(data.outpath("AllToAll.R.gdist_L2.npy"), gdist_L2_r)
-
-
+gdist_L2_l = Parallel(n_jobs=-1)(delayed(np.diag)(euclidean_distances(subject(i).load_gdist_matrix("L")),
+                                                  euclidean_distances(subject(j).load_gdist_matrix("L"))) 
+                                                  for i, j in subj_pairs)
+filename = data.outpath("AllToAll.L.gdist_L2.npy")
+np.save(filename, np.asarray(gdist_L2_l).T)
+print(f"Left hemisphere output saved at {filename} \n", 
+      f"Matrix size: {np.asarray(gdist_L2_l).T.shape} \n")
 
 
-gdist_L2_l = np.load(data.outpath("AllToAll.L.gdist_L2.npy"), mmap_mode='r+')
-gdist_L2_r = np.load(data.outpath("AllToAll.R.gdist_L2.npy"), mmap_mode='r+')
-
-
-i, j = subj_pairs[index]
-
-# Left
-Di = subject(data.subj_list[i]).load_gdist_triu("L")
-Dj = subject(data.subj_list[j]).load_gdist_triu("L")
-n_vtx = vertex_info_10k.grayl.size 
-for vtx in range(n_vtx):
-    L2 = euclidean_distances(row_from_triu(vtx, k=1, triu=Di, include_diag=True).reshape(1,-1), 
-                                row_from_triu(vtx, k=1, triu=Dj, include_diag=True).reshape(1,-1)
-                                ).squeeze()
-    gdist_L2_l[vtx, index] = L2
-    gdist_L2_l.flush()
-
-
-# Right
-print
-Di = subject(data.subj_list[i]).load_gdist_triu("R")
-Dj = subject(data.subj_list[j]).load_gdist_triu("R")
-n_vtx = vertex_info_10k.grayr.size
-for vtx in range(n_vtx):
-    L2 = euclidean_distances(row_from_triu(vtx, k=1, triu=Di, include_diag=True).reshape(1,-1), 
-                                row_from_triu(vtx, k=1, triu=Dj, include_diag=True).reshape(1,-1)
-                                ).squeeze()
-    gdist_L2_r[vtx, index] = L2
-    gdist_L2_r.flush()
-
-print(f"Completed comparison {index+1} of {n_pairs}")
-
+gdist_L2_r = Parallel(n_jobs=-1)(delayed(np.diag)(euclidean_distances(subject(i).load_gdist_matrix("R")),
+                                                  euclidean_distances(subject(j).load_gdist_matrix("R")))
+                                                  for i, j in subj_pairs)
+filename = data.outpath("AllToAll.R.gdist_L2.npy")
+np.save(filename, np.asarray(gdist_L2_r).T)
+print(f"Right hemisphere output saved at {filename} \n", 
+      f"Matrix size: {np.asarray(gdist_L2_r).T.shape} \n")
