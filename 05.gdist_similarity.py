@@ -14,8 +14,7 @@ n_subj = data.N
 subj_pairs = list(combinations(range(n_subj), 2))
 subj_pairs = data.subj_list[subj_pairs]
 
-np.print(f"\n\nComputing the inter-subject similarity of vertex geodesic 
-         distance profile for {len(subj_pairs)} subject pairs \n")
+print(f"\n\nComputing the inter-subject similarity of vertex geodesic distance profile for {len(subj_pairs)} subject pairs \n")
 
 
 gdist_L2_l = Parallel(n_jobs=-1)(delayed(np.diag)(euclidean_distances(subject(i).load_gdist_matrix("L")),
