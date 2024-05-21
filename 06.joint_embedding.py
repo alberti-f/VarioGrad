@@ -3,7 +3,6 @@
 from variograd_utils import *
 from nighres.shape import spectral_matrix_embedding
 import numpy as np
-import gc
 from joblib import Parallel, delayed
 
 n_components = 10
@@ -37,16 +36,16 @@ def joint_embedding(id, h, m, s, a):
     return embedding["result"]
 
 
-for n, args in enumerate(params[:1]):
+for n, args in enumerate(params):
     h, m, s, a  = args
 
     print(f"\n\n\t\t\tParameter combinaiton {n+1}/{len(params)}\n", h, m, s, a)
 
     n_vertices = vertex_info_10k[f"gray{h.lower()}"].size
 
-    all_embeddings = Parallel(n_jobs=-1)(delayed(joint_embedding)(id, h, m, s, a) for id in data.subj_list[:1])
+    all_embeddings = Parallel(n_jobs=-1)(delayed(joint_embedding)(id, h, m, s, a) for id in data.subj_list)
 
     filename = data.outpath(f'All.{h}.embeddings.npz')
-    # npz_update(filename, {f"JE_m{int(m)}_{a}_s{int(s)}": all_embeddings})
+    npz_update(filename, {f"JE_m{int(m)}_{a}_s{int(s)}": all_embeddings})
 
     print(f"Output saved in archive {filename} \nFile name: JE_m{int(m)}_{a}_s{int(s)} \n")
