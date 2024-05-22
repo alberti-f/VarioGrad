@@ -1,6 +1,5 @@
 # Joint Embedding in parallel
 
-import nighres
 from variograd_utils import *
 from nighres.shape import spectral_matrix_embedding
 import numpy as np
