@@ -1,5 +1,6 @@
 # Joint Embedding in parallel
 
+import nighres
 from variograd_utils import *
 from nighres.shape import spectral_matrix_embedding
 import numpy as np
@@ -26,13 +27,13 @@ def joint_embedding(id, h, m, s, a):
     C += (M + R) / 2
 
     embedding = spectral_matrix_embedding(M, 
-                                          reference_matrix = R,
-                                          correspondence_matrix=C,
-                                          ref_correspondence_matrix=R,
-                                          surface_mesh = getattr(subj, f"{h}_cortex_midthickness_10k_T1w"), 
-                                          reference_mesh = getattr(data, f"{h}_cortex_midthickness_10k"), 
-                                          dims=n_components, msize=m, scale=s, space=s, affinity=a, 
-                                          rotate=True, save_data=False, overwrite=True)
+                                            reference_matrix = R,
+                                            correspondence_matrix=C,
+                                            ref_correspondence_matrix=R,
+                                            surface_mesh = getattr(subj, f"{h}_cortex_midthickness_10k_T1w"), 
+                                            reference_mesh = getattr(data, f"{h}_cortex_midthickness_10k"), 
+                                            dims=n_components, msize=m, scale=s, space=s, affinity=a, 
+                                            rotate=True, save_data=False, overwrite=True)
     return embedding["result"]
 
 
