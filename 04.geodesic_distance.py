@@ -5,6 +5,7 @@ from subprocess import run
 from variograd_utils import *
 from os.path import exists
 import sys
+import os
 
 
 index = int(sys.argv[1])-1
@@ -23,9 +24,11 @@ for h in ["L", "R"]:
         continue
     
     surface = getattr(subj, f"{h}_cortex_midthickness_10k_T1w")
-    dconn = data.outpath(f"tmp.{h}.geodesic_distance.dconn.nii")
+    dconn = data.outpath(f"{id}.tmp.{h}.geodesic_distance.dconn.nii")
     run(command.format(surface, dconn), shell=True)
     gdist_matrix = nib.load(dconn)
 
     np.save(filename, gdist_matrix.get_fdata(caching="unchanged")[np.triu_indices_from(gdist_matrix, k=1)].astype("float32"))
+
+    os.remove(dconn)
     
