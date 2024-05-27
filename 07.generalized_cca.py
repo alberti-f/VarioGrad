@@ -82,7 +82,7 @@ for h, r_gcca, r_svd in params[:1]:
 
 
     # Canonical projections
-    print("\t Projecting individual views")
+    print("\n\n Projecting individual views")
     vinfo = vertex_info_10k
     GCCA = {f"GCCA_r{r_svd}": np.zeros([data.N, vinfo[f"gray{h.lower()}"].size, r_gcca])}
 
