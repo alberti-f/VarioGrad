@@ -11,6 +11,7 @@ from nighres.shape import spectral_matrix_embedding
 import numpy as np
 import gc
 from joblib import Parallel, delayed
+import sys
 
 
 
@@ -146,6 +147,10 @@ def embed_mesh(id, s, k, a, t, h):
 #------------------------------------------------------------
 
 
+index = int(sys.argv[1])-1
+
+data = dataset()
+id = data.subj_list[index]
 
 n_components = 10
 data = dataset()
@@ -158,25 +163,21 @@ hemi = ["L", "R"]
 params = np.array(np.meshgrid(scale, hemi, alpha, time, kernel), dtype="object").T.reshape(-1, 5)
 
 
-
+all_embeddings = {}
 for n, args in enumerate(params):
     s, h, a, t, k  = args
+    key = f"JDE_{k}{int(s)}_a{str(0.5).replace('.', '')}_t{t}"
 
-    print(f"\n\n\t\t\tParameter combinaiton {n+1}/{len(params)}\n",
-          "hemi:", h, 
-          "scale:", s, 
-          "kernel:", k, 
-          "alpha:", a, 
-          "time:", t)
-
+    print(f"\n\nParameter combinaiton {n+1}/{len(params)}\n", "\t\tkey:", key, "\n",)
+    
     n_vertices = vertex_info_10k[f"gray{h.lower()}"].size
 
-    all_embeddings = Parallel(n_jobs=-1)(delayed(embed_mesh)(id, s, k, a, t, h) for id in data.subj_list)
+    # all_embeddings = Parallel(n_jobs=-1)(delayed(embed_mesh)(id, s, k, a, t, h) for id in data.subj_list)
+    all_embeddings[key] = embed_mesh(id, s, k, a, t, h) 
 
-    filename = data.outpath(f'All.{h}.embeddings.npz')
-    key = f"JDE_{k}{int(s)}_a{str(0.5).replace('.', '')}_t{t}"
-    npz_update(filename, {key: all_embeddings})
+filename = data.outpath(f'{id}.{h}.embeddings.npz')
+npz_update(filename,  all_embeddings)
 
-    print(f"Output saved in archive {filename} \nKey: {key} \n")
+print(f"Output saved in archive {filename} \n")
 
-data.allign_embeddings(alg="JDE")
+# data.allign_embeddings(alg="JDE")

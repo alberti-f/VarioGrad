@@ -42,6 +42,8 @@ def joint_embedding(id, h, m, s, a):
     return embedding["result"]
 
 
+
+
 for n, args in enumerate(params):
     process = psutil.Process()
 
