@@ -107,7 +107,7 @@ def _prep_GiftiDataArray_args(darrays=None, intents=None, dtypes=None, metas=Non
             prepped_args += (arg,)
             continue
         elif (isinstance(arg, (int, float, str, np.int32, np.int64, np.float64, np.float32, dict))) | (arg is None):
-            prepped_args += ([arg for _ in range(N)])
+            prepped_args += ([arg for _ in range(N)],)
         else:
             raise TypeError(f"'{arg_names[i]}' is not the correct data type, consult documentation to find the compatible ones.")
         
