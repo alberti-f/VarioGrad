@@ -7,7 +7,6 @@ from sklearn.preprocessing import normalize
 from mapalign.embed import compute_diffusion_map
 import psutil
 from variograd_utils import *
-from nighres.shape import spectral_matrix_embedding
 import numpy as np
 import gc
 from joblib import Parallel, delayed
