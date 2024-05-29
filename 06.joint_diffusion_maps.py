@@ -69,9 +69,9 @@ def joint_embedding(M, R, C=None, n_components=10, kernel=None, affinity="cosine
     elif kernel == 'gauss':
         M = np.exp(-0.5 * (M ** 2) / (scale ** 2))
         R = np.exp(-0.5 * (R ** 2) / (scale ** 2))
-    elif kernel == 'cosine':
-        M = max(1.0 - M / scale, 0.0)
-        R = max(1.0 - R / scale, 0.0)
+    elif kernel == 'linear':
+        M = M / scale
+        R = R / scale
     elif kernel == 'precomputed' or kernel is None:
         pass
     else:
