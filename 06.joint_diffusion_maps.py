@@ -156,7 +156,7 @@ data = dataset()
 kernel = ["cauchy", "gauss", "linear"]
 scale = np.arange(50, 201, 50, dtype="float32")
 alpha = [0.5]
-time = [1, 2]
+time = [1]
 hemi = ["L", "R"]
 
 params = np.array(np.meshgrid(scale, hemi, alpha, time, kernel), dtype="object").T.reshape(-1, 5)
