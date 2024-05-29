@@ -153,7 +153,7 @@ id = data.subj_list[index]
 
 n_components = 10
 data = dataset()
-kernel = ["cauchy", "gauss", "linear"]
+kernel = ["cauchy", "gauss", "linear", None]
 scale = np.arange(50, 201, 50, dtype="float32")
 alpha = [0.5]
 time = [1]
