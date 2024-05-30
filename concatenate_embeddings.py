@@ -1,4 +1,3 @@
-from surfplot import Plot
 from variograd_utils import *
 import numpy as np
 import os
