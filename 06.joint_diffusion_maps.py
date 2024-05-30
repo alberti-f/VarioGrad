@@ -159,24 +159,23 @@ alpha = [0.5]
 time = [1]
 hemi = ["L", "R"]
 
-params = np.array(np.meshgrid(scale, hemi, alpha, time, kernel), dtype="object").T.reshape(-1, 5)
+params = np.array(np.meshgrid(scale, alpha, time, kernel), dtype="object").T.reshape(-1, 4)
 
 
-all_embeddings = {}
-for n, args in enumerate(params):
-    s, h, a, t, k  = args
-    key = f"JDE_{k}{int(s)}_a{str(0.5).replace('.', '')}_t{t}"
+for h in hemi:
+    all_embeddings = {}
+    for n, args in enumerate(params):
+        s, a, t, k  = args
+        key = f"JDE_{k}{int(s)}_a{str(a).replace('.', '')}_t{t}"
 
-    print(f"\n\nParameter combinaiton {n+1}/{len(params)}\n", "\t\tkey:", key, "\n",)
-    
-    n_vertices = vertex_info_10k[f"gray{h.lower()}"].size
+        print(f"\n\nParameter combinaiton {n+1}/{len(params)}\n", "\t\tkey:", key, "\n",)
+        
+        n_vertices = vertex_info_10k[f"gray{h.lower()}"].size
 
-    # all_embeddings = Parallel(n_jobs=-1)(delayed(embed_mesh)(id, s, k, a, t, h) for id in data.subj_list)
-    all_embeddings[key] = embed_mesh(id, s, k, a, t, h) 
+        # all_embeddings = Parallel(n_jobs=-1)(delayed(embed_mesh)(id, s, k, a, t, h) for id in data.subj_list)
+        all_embeddings[key] = embed_mesh(id, s, k, a, t, h) 
 
-filename = data.outpath(f'{id}.{h}.embeddings.npz')
-npz_update(filename,  all_embeddings)
+    filename = data.outpath(f'{id}.{h}.embeddings.npz')
+    npz_update(filename,  all_embeddings)
 
-print(f"Output saved in archive {filename} \n")
-
-# data.allign_embeddings(alg="JDE")
+    print(f"Output saved in archive {filename} \n")
