@@ -5,8 +5,6 @@ import os
 
 n_components = 10
 data = dataset()
-embeddings = data.load_embeddings("L", "JDE")["JDE_cauchy50_a0.5_t1"]
-embeddings.shape
 
 
 # preassign empty arrays
