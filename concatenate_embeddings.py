@@ -18,16 +18,15 @@ embeddings_r = {}
 for i, id in enumerate(data.subj_list):
 
     subj = subject(id)
-    embeddings_subj = np.load(subj.outpath(f"{id}.L.embeddings.npz"))
 
+    embeddings_subj = np.load(subj.outpath(f"{id}.L.embeddings.npz"))
     for key, value in embeddings_subj.items():
         if key not in embeddings_l:
             embeddings_l[key] = zeroarrayl.copy()
         embeddings_l[key][i] = value
 
 
-    embeddings_subj = np.load(data.outpath(f"{id}.R.embeddings.npz"))
-
+    embeddings_subj = np.load(subj.outpath(f"{id}.R.embeddings.npz"))
     for key, value in embeddings_subj.items():
         if key not in embeddings_r:
             embeddings_r[key] = zeroarrayr.copy()

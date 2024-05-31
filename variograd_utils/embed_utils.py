@@ -8,6 +8,23 @@ from sklearn.preprocessing import normalize
 
 
 def kernelize(A, kernel="linear", scale=50):
+    '''
+    Apply kernel to a matrix A
+    
+    Parameters
+    ----------
+    A : array-like
+        The input matrix
+    kernel : str
+        The kernel to apply. Options are "cauchy", "log", "gauss", "linear"
+    scale : float
+        The scaling parameter for the kernel
+        
+    Returns
+    -------
+    A : array-like
+        The kernelized matrix
+    '''
 
     if kernel == 'cauchy':
         A = 1.0 / (1.0 + (A ** 2) / (scale ** 2))
@@ -24,6 +41,23 @@ def kernelize(A, kernel="linear", scale=50):
 
 
 def affinity(A, B=None, method="cosine"):
+    '''
+    Compute the affinity matrix between two matrices A and B
+    
+    Parameters
+    ----------
+    A : array-like
+        The first matrix
+    B : array-like
+        The second matrix
+    method : str
+        The method to compute the affinity. Options are "cosine", "correlation"
+    
+    Returns
+    -------
+    M : array-like
+        The affinity matrix
+    '''
 
     B = A if B is None else B
 
@@ -37,7 +71,34 @@ def affinity(A, B=None, method="cosine"):
     return M
 
 
-def joint_laplacian(M, R, C=None, kernel=None, affinity=None, scale=50, space=None, laplacian="normalized"):
+def joint_laplacian(M, R, C=None, kernel=None, similarity=None, scale=50, space=None, laplacian="normalized"):
+    '''
+    Compute the Laplacian matrix for the joint embedding
+    
+    Parameters
+    ----------
+    M : array-like
+        The target matrix
+    R : array-like
+        The reference matrix
+    C : array-like, optional
+        The correspondence matrix (default=None)
+    kernel : str, optional
+        The kernel to apply. Options are "cauchy", "log", "gauss", "linear" (default=None)
+    affinity : str, optional
+        The method to compute the affinity. Options are "cosine", "correlation" (default=None)
+    scale : float, optional
+        The scaling parameter for the kernel (default=50)
+    space : float, optional
+        The scaling parameter for the correspondence matrix (default=None)
+    laplacian : str, optional
+        The type of Laplacian to compute. Options are "normalized", "unnormalized" (default="normalized")
+    
+    Returns
+    -------
+    L : array-like
+        The joint Laplacian matrix
+    '''
 
     # Apply kernel to matrices
     space = scale if space is None else space
@@ -48,13 +109,13 @@ def joint_laplacian(M, R, C=None, kernel=None, affinity=None, scale=50, space=No
             C = kernelize(C, kernel=kernel, scale=space)
     
     # Convert to affinity and compute correspondence matrix
-    if affinity is not None:
-        R = affinity(R, method=affinity)
-        M = affinity(M, method=affinity)
+    if similarity is not None:
+        R = affinity(R, method=similarity)
+        M = affinity(M, method=similarity)
         if isinstance(C, np.ndarray):
-            C = affinity(C, method=affinity)
+            C = affinity(C, method=similarity)
         else:
-            C = affinity(R, M, method=affinity)
+            C = affinity(R, M, method=similarity)
     
     # Build the joint affinity matrix and degree matrix
     A = np.vstack([np.hstack([R, C]), 
@@ -71,15 +132,15 @@ def joint_laplacian(M, R, C=None, kernel=None, affinity=None, scale=50, space=No
 
 
 
-def reference_laplacian(R, kernel=None, affinity=None, scale=50, laplacian="normalized"):
+def reference_laplacian(R, kernel=None, similarity=None, scale=50, laplacian="normalized"):
         
         # Apply kernel to matrices
         if kernel is not None:
             R = kernelize(R, kernel=kernel, scale=scale)
         
         # Convert to affinity and compute correspondence matrix
-        if affinity is not None:
-            R = affinity(R, method=affinity)
+        if similarity is not None:
+            R = affinity(R, method=similarity)
         
         # Calculate degree
         D = np.sum(R, axis=1).reshape(-1, 1)
@@ -94,7 +155,7 @@ def reference_laplacian(R, kernel=None, affinity=None, scale=50, laplacian="norm
 
 
 
-def joint_embedding(M, R, C=None, n_components=2, kernel=None, affinity=None, scale=50, space=None, 
+def joint_embedding(M, R, C=None, n_components=2, kernel=None, similarity=None, scale=50, space=None, 
                     laplacian="normalized", overwrite=False, svd_kws=None, return_ref=False, rotate=True):
 
     N = M.shape[0]
@@ -110,7 +171,7 @@ def joint_embedding(M, R, C=None, n_components=2, kernel=None, affinity=None, sc
 
 
     # Compute the joint Laplacian matrix
-    L = joint_laplacian(M, R, C, kernel=kernel, affinity=affinity, 
+    L = joint_laplacian(M, R, C, kernel=kernel, similarity=similarity, 
                         scale=scale, space=space, laplacian=laplacian)
 
     # Compute the eigenvectors and eigenvalues
@@ -136,11 +197,10 @@ def joint_embedding(M, R, C=None, n_components=2, kernel=None, affinity=None, sc
           "\n\tMean:", np.nanmean(orthogonality))
 
 
-
     # Rotate the joint embedding
     if rotate:
 
-        SVD_ref = TruncatedSVD(**svd_kws).fit(reference_laplacian(R, kernel=kernel, affinity=affinity, 
+        SVD_ref = TruncatedSVD(**svd_kws).fit(reference_laplacian(R, kernel=kernel, similarity=similarity, 
                                                                   scale=scale, laplacian=laplacian))
         ref_norm = normalize(SVD_ref.components_, axis=0)
         
@@ -157,5 +217,6 @@ def joint_embedding(M, R, C=None, n_components=2, kernel=None, affinity=None, sc
         return B[:, 1:], A[:, 1:]
     else:
         return B[:, 1:]
+
 
 

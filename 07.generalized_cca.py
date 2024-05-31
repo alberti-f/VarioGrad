@@ -26,17 +26,16 @@ def subject_svd(id, rank):
     return u, s, v
 
 
-
-
 data = dataset()
 rank_gcca = 10
 rank_svd = [10, 50, 100]
 hemi = ["L", "R"]
 
+
 params = np.array(np.meshgrid(hemi, rank_gcca, rank_svd), dtype="object").T.reshape(-1, 3)
 
 
-for h, r_gcca, r_svd in params[:1]:
+for h, r_gcca, r_svd in params:
     print("\n\nGeneralized Canonical Correlation Analysis\n\n")
 
 
