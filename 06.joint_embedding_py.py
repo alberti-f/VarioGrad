@@ -16,8 +16,6 @@ scale = np.arange(50, 201, 50, dtype="float32")
 hemi = ["L", "R"]
 
 params = np.array(np.meshgrid(scale, kernel), dtype="object").T.reshape(-1, 2)
-params = params[:2]
-
 
 for h in hemi:
     subj = subject(id)
