@@ -40,7 +40,7 @@ for h in hemi:
         print(f"\n\tMemory used: {process.memory_info().rss / (1024 ** 3):.2f} GB\n")
         del process
 
-    filename = data.outpath(f'{id}.{h}.embeddings.npz')
+    filename = subj.outpath(f'{id}.{h}.embeddings.npz')
     npz_update(filename,  all_embeddings)
 
     print(f"Output saved in archive {filename} \n")

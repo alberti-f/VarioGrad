@@ -17,12 +17,13 @@ embeddings_l = {}
 embeddings_r = {}
 for i, id in enumerate(data.subj_list):
 
-    # embeddings_subj = np.load(data.outpath(f"{id}.L.embeddings.npz"))
+    subj = subject(id)
+    embeddings_subj = np.load(subj.outpath(f"{id}.L.embeddings.npz"))
 
-    # for key, value in embeddings_subj.items():
-    #     if key not in embeddings_l:
-    #         embeddings_l[key] = zeroarrayl.copy()
-    #     embeddings_l[key][i] = value
+    for key, value in embeddings_subj.items():
+        if key not in embeddings_l:
+            embeddings_l[key] = zeroarrayl.copy()
+        embeddings_l[key][i] = value
 
 
     embeddings_subj = np.load(data.outpath(f"{id}.R.embeddings.npz"))
@@ -34,10 +35,10 @@ for i, id in enumerate(data.subj_list):
     
 
     # remove subject embeddings
-    # os.remove(subj.outpath(f"{id}.L.embeddings.npz"))
-    # os.remove(subj.outpath(f"{id}.R.embeddings.npz"))
+    os.remove(subj.outpath(f"{id}.L.embeddings.npz"))
+    os.remove(subj.outpath(f"{id}.R.embeddings.npz"))
 
 
 # save group embeddings
-# npz_update(data.outpath("All.L.embeddings.npz"), embeddings_l)
+npz_update(data.outpath("All.L.embeddings.npz"), embeddings_l)
 npz_update(data.outpath("All.R.embeddings.npz"), embeddings_r)
