@@ -210,8 +210,8 @@ def joint_embedding(M, R, C=None, n_components=2, kernel=None, similarity=None, 
         B = np.dot(B.T, rotation_mat)
 
     # Normalize the embeddings
-    B = normalize(B, axis=0)
-    A = normalize(A.T, axis=0)
+    B = normalize(B, axis=1)
+    A = normalize(A.T, axis=1)
 
     if return_ref:
         return B[:, 1:], A[:, 1:]
