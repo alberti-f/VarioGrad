@@ -99,4 +99,8 @@ if index == data.N-1:
     data.allign_embeddings("L", alg="GCCA")
     data.allign_embeddings("R", alg="GCCA")
 
+    for id in data.subj_list:
+        os.remove(subject(id).outpath(f"{id}.L.svd.npz"))
+        os.remove(subject(id).outpath(f"{id}.R.svd.npz"))
+
     print("\t\t Done")
