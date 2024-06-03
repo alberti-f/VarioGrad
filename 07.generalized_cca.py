@@ -7,95 +7,96 @@ import numpy as np
 from scipy import stats, linalg
 from scipy.sparse.linalg import svds
 from sklearn.preprocessing import normalize
-from joblib import Parallel, delayed
+import os, sys
 
+index = int(sys.argv[1])-1
 
-def subject_svd(id, rank):
-    X = subject(id).load_gdist_matrix(h)
-    X = stats.zscore(X, axis=1, ddof=1)
-    mu = np.mean(X, axis=0)
-    X -= mu
-
-    u, s, vt = svds(X, k=rank, which="LM", random_state=0)
-    sorter = np.argsort(-s)
-    v = vt.T
-    v = v[:, sorter]
-    ut = u.T
-    u = ut.T[:, sorter]
-    
-    return u, s, v
-
-
-data = dataset()
 rank_gcca = 10
 rank_svd = [10, 50, 100]
 hemi = ["L", "R"]
 
 
-params = np.array(np.meshgrid(hemi, rank_gcca, rank_svd), dtype="object").T.reshape(-1, 3)
+data = dataset()
+id = data.subj_list[index]
+subj = subject(id)
+vinfo = vertex_info_10k
 
+print("\n\nGeneralized Canonical Correlation Analysis\n\n")
+print(f"Subject {id} ({index+1}/{data.N})")
 
-for h, r_gcca, r_svd in params:
-    print("\n\nGeneralized Canonical Correlation Analysis\n\n")
-
+for h in hemi:
+    X = subj.load_gdist_matrix(h)
+    X = stats.zscore(X, axis=1, ddof=1)
+    mu = np.mean(X, axis=0)
+    X -= mu
 
     # Compute individual embeddings
-    print("\t Computing individual embeddings")
+    SVDs = {}
+    r_svd = np.max(rank_svd)
 
-    USV = Parallel(n_jobs=-1)(delayed(subject_svd)(id, r_svd) for id in data.subj_list)
-    Uall = [usv[0] for usv in USV]
-    Sall = [usv[1] for usv in USV]
-    Vall = [usv[2] for usv in USV]
-    
+    print("\t Computing individual embedding for hemisphere ", h)
 
-    npz_update(data.outpath(f'All.{h}.embeddings.npz'), {f"SVD_r{r_svd}_U": np.array(Uall)})
-    npz_update(data.outpath(f'All.{h}.embeddings.npz'), {f"SVD_r{r_svd}_S": np.array(Sall)})
-    npz_update(data.outpath(f'All.{h}.embeddings.npz'), {f"SVD_r{r_svd}_V": np.array(Vall)})
+    u, s, vt = svds(X, k=r_svd, which="LM", random_state=0)
 
+    sorter = np.argsort(-s)
+    v = vt.T
+    v = v[:, sorter]
+    ut = u.T
+    u = ut.T[:, sorter]
+    s = s[sorter]
+
+    SVDs[f"SVD_U"] = u
+    SVDs[f"SVD_S"] = s
+    SVDs[f"SVD_V"] = v
+
+
+    npz_update(subj.outpath(f'{subj.id}.{h}.svd.npz'), SVDs)
+
+################# NOT ADAPTED TO PARALLELIZATION #################
+# Group SVD and projections take place only if all subjects have been processed
+params = np.array(np.meshgrid(rank_svd, hemi), dtype="object").T.reshape(-1, 2)
+if index == data.N-1:
 
     # Generate projection matrices
-    print("\t Generating projection matrices")
+    for r_svd, h in params:
+        print(f"\n\nComputing GCCA with r_svd={r_svd} and r_gcca={rank_gcca} for hemisphere {h}")
+        print("\tComputing group SVD")
 
-    Uall = data.load_embeddings(h, "SVD")[f"SVD_r{r_gcca}_U"]
-    Uall =  Uall.transpose(1, 0, 2).reshape(Uall.shape[1], -1)
+        svd_paths = [subject(id).outpath(f"{id}.{h}.svd.npz") for id in data.subj_list]
+        Uall = np.hstack([np.load(path)[f"SVD_U"][:, :r_svd] for path in svd_paths])
 
-    _, _, VV = svds(Uall, k=r_gcca)
-    VV = np.flip(VV.T, axis=1)
-    VV = VV[:, : r_gcca]
+        _, _, VV = svds(Uall, k=rank_gcca)
+        VV = np.flip(VV.T, axis=1)
+        VV = VV[:, : rank_gcca]
 
+        print("\tProjecting individual embeddings onto group SVDs")
+        GCCA = {f"GCCA_r{r_svd}": np.zeros([data.N, vinfo[f"gray{h.lower()}"].size, rank_gcca])}
+        for id in data.subj_list: 
+            subj = subject(id)
 
-    projection_mats = []
-    idx_end = 0
-    for i in range(data.N):
-        idx_start = idx_end
-        idx_end = idx_start + r_svd
-        VVi = normalize(VV[idx_start:idx_end, :], "l2", axis=0)
+            idx_start = subj.idx * r_svd
+            idx_end = idx_start + r_svd
 
-        A = np.sqrt(data.N - 1) * Vall[i][:, : r_svd]
-        A = A @ (linalg.solve(
-            np.diag(Sall[i][: r_svd]), VVi
-            ))
-        projection_mats.append(A)
-
-    np.save(data.outpath(f"All.{h}.GCCA_proj_mats.npy"), projection_mats)
+            Vi = np.load(svd_paths[subj.idx])[f"SVD_V"]
+            Si = np.load(svd_paths[subj.idx])[f"SVD_S"]
+            VVi = normalize(VV[idx_start:idx_end, :], "l2", axis=0)
 
 
-    # Canonical projections
-    print("\n\n Projecting individual views")
-    vinfo = vertex_info_10k
-    GCCA = {f"GCCA_r{r_svd}": np.zeros([data.N, vinfo[f"gray{h.lower()}"].size, r_gcca])}
+            A = np.sqrt(data.N - 1) * Vi[:, : r_svd]
+            A = A @ (linalg.solve(
+                np.diag(Si[: r_svd]), VVi
+                ))
+            
+            X = subj.load_gdist_matrix(h)
+            X = stats.zscore(X, axis=1, ddof=1)
+            mu = np.mean(X, axis=0)
+            X -= mu
 
-    for id in data.subj_list:
-        subj = subject(id)
+            GCCA[f"GCCA_r{r_svd}"][subj.idx] = Xfit = X @ A
 
-        X = subj.load_gdist_matrix(h)
-        X = stats.zscore(X, axis=1, ddof=1)
-        mu = np.mean(X, axis=0)
-        X -= mu
+        npz_update(data.outpath(f'All.{h}.embeddings.npz'), GCCA)
 
-        Xfit = X @ projection_mats[subj.idx]
-        GCCA[f"GCCA_r{r_svd}"][subj.idx] = Xfit
-
-    npz_update(data.outpath(f'All.{h}.embeddings.npz'), GCCA)
+    data.allign_embeddings("L", alg="GCCA")
+    data.allign_embeddings("R", alg="GCCA")
 
     print("\t\t Done")
