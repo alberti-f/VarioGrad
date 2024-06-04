@@ -5,7 +5,7 @@
 #           geodesic distance between vertices in WorkBench
 #
 #           Note: The script assumes that the 32k and 10k spheres are found in
-#           <group-dir> and <groupdir>/10k_fs_LR/ respectively
+#           <group-dir> and <group-dir>/10k_fs_LR/ respectively
 #           
 #           usage: python create_cortex_dlabel <group-dir>
 #                   <group-dir>:    directory containing the goup average
@@ -16,18 +16,19 @@ import numpy as np
 from nibabel import gifti, save, load
 import hcp_utils as hcp
 from subprocess import run
-from variograd_utils.core_utils import dataset
+from variograd_utils import *
 
-# import sys
-# group_dir = sys.argv[1]
+data = dataset()
+group_dir = data.group_dir
+mesh10k_dir = data.mesh10k_dir
+output_dir = data.output_dir
 
-group_dir = dataset().group_dir
 
 # set formattable paths
-mask32k_path = group_dir + "/S1200.{0}.CortexMask.32k_fs_LR.shape.gii"
-mask10k_path = group_dir + "/10k_fs_LR/S1200.{0}.CortexMask.10k_fs_LR.shape.gii"
+mask32k_path = output_dir + "/S1200.{0}.CortexMask.32k_fs_LR.shape.gii"
+mask10k_path = output_dir + "/S1200.{0}.CortexMask.10k_fs_LR.shape.gii"
 sphere32k_path = group_dir + "/S1200.{0}.sphere.32k_fs_LR.surf.gii"
-sphere10k_path = group_dir + "/10k_fs_LR/S1200.{0}.sphere.10k_fs_LR.surf.gii"
+sphere10k_path = mesh10k_dir + "/S1200.{0}.sphere.10k_fs_LR.surf.gii"
 
 # get cortex vertices
 vinfo = hcp.vertex_info
@@ -63,7 +64,7 @@ command = f"\
 vinfo = {}
 run(command, shell=True)
 for h in ["L", "R"]:
-    mask = load(f"/home/fralberti/Data/HCP_S1200/HCP_S1200_GroupAvg_v1/10k_fs_LR/S1200.{h}.CortexMask.10k_fs_LR.shape.gii").darrays[0].data.astype("bool")
+    mask = load(f"{data.output_dir}/S1200.{h}.CortexMask.10k_fs_LR.shape.gii").darrays[0].data.astype("bool")
     vinfo[f"num_mesh{h.lower()}"] = len(mask)
     vinfo[f"gray{h.lower()}"] = np.arange(len(mask))[mask]
     vinfo[f"offset{h.lower()}"] = len(mask)*(h=="R")

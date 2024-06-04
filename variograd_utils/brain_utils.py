@@ -120,7 +120,7 @@ def save_gifti(darrays=None, intents=0, dtypes=None, structure=None, filename=No
 
     len_specified = [len(arg) for arg in [darrays, intents, dtypes, metas] if arg is not None]
     if ~np.all(len_specified):
-        raise TypeError("If darrays, intents, dtypes, and metas are specified as lists, they should have all the same number of items.")
+        raise TypeError("If darrays, intents, dtypes, and metas are specified as lists, they should all have  the same number of items.")
     
     image = gifti.GiftiImage()
     for darray, intent, dtype, meta in zip(darrays, intents, dtypes, metas):
