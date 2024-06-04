@@ -33,11 +33,12 @@ for i, id in enumerate(data.subj_list):
         embeddings_r[key][i] = value
     
 
-    # remove subject embeddings
-    os.remove(subj.outpath(f"{id}.L.embeddings.npz"))
-    os.remove(subj.outpath(f"{id}.R.embeddings.npz"))
-
-
 # save group embeddings
 npz_update(data.outpath("All.L.embeddings.npz"), embeddings_l)
 npz_update(data.outpath("All.R.embeddings.npz"), embeddings_r)
+
+
+if os.path.exists(subject(id).outpath(f"{id}.L.embeddings.npz")) and os.path.exists(subject(id).outpath(f"{id}.R.embeddings.npz")):
+    for id in data.subj_list:
+        os.remove(subject(id).outpath(f"{id}.L.embeddings.npz"))
+        os.remove(subject(id).outpath(f"{id}.R.embeddings.npz"))
