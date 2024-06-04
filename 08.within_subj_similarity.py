@@ -8,19 +8,19 @@ from os.path import exists
 
 overwrite = True
 algorithm = ["JE", "GCCA"]
-radius = [25, 50, 100, 150, 200, 999]
-size = 100
+radius = [50, 999]
+size = 150
 
 
 data =  dataset()
 embed_l, embed_r = (data.load_embeddings("L", algorithm), data.load_embeddings("R", algorithm))
 
-n_subj = len(data.subj_list)         #################### can be removed and changed to data.N downstream
 n_comps = embed_l[list(embed_l.keys())[0]].shape[2]
 n_ks = len(embed_l.keys())
 vinfo = vertex_info_10k
 
 
+# Check for the existence of previous computations and avoit overwriting if overwrite is False
 skip_algs_l = skip_algs_r =[]
 if exists(data.outpath("All.L.within_subj_similarity.npz")) and not overwrite:
     skip_algs_l = np.load(data.outpath(f"All.L.within_subj_similarity.npz")).keys()
@@ -28,15 +28,15 @@ if exists(data.outpath("All.R.within_subj_similarity.npz")) and not overwrite:
     skip_algs_r = np.load(data.outpath(f"All.R.within_subj_similarity.npz")).keys()
 
 if overwrite:
-    correlations_l = {k: np.zeros([n_subj, len(radius), vinfo.grayl.size]) for k in embed_l.keys()}
-    correlations_r = {k: np.zeros([n_subj, len(radius), vinfo.grayr.size]) for k in embed_r.keys()}
+    correlations_l = {k: np.zeros([data.N, len(radius), vinfo.grayl.size]) for k in embed_l.keys()}
+    correlations_r = {k: np.zeros([data.N, len(radius), vinfo.grayr.size]) for k in embed_r.keys()}
 else:
-    correlations_l = {k: np.zeros([n_subj, vinfo.grayl.size, len(radius)]) for k in embed_l.keys() if k not in skip_algs_l}
-    correlations_r = {k: np.zeros([n_subj, vinfo.grayr.size, len(radius)]) for k in embed_r.keys() if k not in skip_algs_r}
+    correlations_l = {k: np.zeros([data.N, len(radius), vinfo.grayl.size]) for k in embed_l.keys() if k not in skip_algs_l}
+    correlations_r = {k: np.zeros([data.N, len(radius), vinfo.grayr.size]) for k in embed_r.keys() if k not in skip_algs_r}
 
 
 
-
+# Randomly mask vertices within a given radius
 def random_masking(x, rad=None, size=None):
     return np.random.choice(np.argwhere(x<=rad).squeeze(), size=size, replace=False)
 
@@ -50,7 +50,7 @@ for r in radius:
 
 
 
-
+# Compute the correlation between the vertex distances in physical and latent space
 for id in data.subj_list:
 
     subj = subject(id)
@@ -62,13 +62,13 @@ for id in data.subj_list:
         if k in skip_algs_l and not overwrite:
             continue
 
-        edist_matrix = euclidean_distances(subj.load_embeddings("L", k)[k])
+        edist_matrix = euclidean_distances(subj.load_embeddings("L", k)[k]).astype("float32")
 
         for i, r in enumerate(radius):
 
             mask = radius_masks_l[r]
             correlations_l[k][subj.idx, i] = vector_wise_corr(gdist_matrix.copy()[idx, mask], 
-                                                              edist_matrix.copy()[idx, mask])
+                                                              edist_matrix.copy()[idx, mask]).astype("float32")
         
     
     gdist_matrix = subj.load_gdist_matrix("R").astype("float32")
@@ -78,13 +78,13 @@ for id in data.subj_list:
         if k in skip_algs_r and not overwrite:
             continue
 
-        edist_matrix = euclidean_distances(subj.load_embeddings("R", k)[k])
+        edist_matrix = euclidean_distances(subj.load_embeddings("R", k)[k]).astype("float32")
 
         for i, r in enumerate(radius):
 
             mask = radius_masks_r[r]
             correlations_r[k][subj.idx, i] = vector_wise_corr(gdist_matrix.copy()[idx, mask], 
-                                                              edist_matrix.copy()[idx, mask])
+                                                              edist_matrix.copy()[idx, mask]).astype("float32")
         
 
         
@@ -97,6 +97,9 @@ npz_update(data.outpath("All.R.within_subj_similarity.npz"), correlations_r)
 
 
 ############################################################################
+
+
+
 
 # Compare  within subject similarity
 
@@ -119,7 +122,6 @@ for h in ["L", "R"]:
     t_maps = {}
     p_maps = {}
 
-    
         
     correlations = np.load(data.outpath(f"All.{h}.within_subj_similarity.npz"))
 
