@@ -2,15 +2,20 @@
 
 import numpy as np
 from variograd_utils import *
-from joblib import Parallel, delayed
 from sklearn.metrics.pairwise import euclidean_distances
 from os.path import exists
 
+# Parameters used by the script
 overwrite = True
 algorithm = ["JE", "GCCA"]
 radius = [50, 999]
 size = 150
 
+print("Computing within subject similarity")
+print("\toverwrite previous data:", overwrite)
+print("\tcompared algorithms:", algorithm)
+print("\tradius of the comparisons:", radius)
+print("\tN vertices sampled per radius:", size)
 
 data =  dataset()
 embed_l, embed_r = (data.load_embeddings("L", algorithm), data.load_embeddings("R", algorithm))
@@ -49,7 +54,7 @@ for r in radius:
     radius_masks_r[r] = np.apply_along_axis(random_masking, 0, data.load_gdist_matrix("R").astype("int32"), rad=r, size=size)
 
 
-
+print("Iterating over subjects:")
 # Compute the correlation between the vertex distances in physical and latent space
 for id in data.subj_list:
 
@@ -88,7 +93,7 @@ for id in data.subj_list:
         
 
         
-    print(f"Subject {id} completed")
+    print(f"\tSubject {subj.idx}/{data.N} completed")
 
 
 
