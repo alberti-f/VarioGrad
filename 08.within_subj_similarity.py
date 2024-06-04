@@ -7,7 +7,7 @@ from sklearn.metrics.pairwise import euclidean_distances
 from os.path import exists
 
 overwrite = True
-algorithm = ["JE_m1500_Cauchy", "JE_m1500_Gauss", "JE_m1500_linear", "GCCA"]
+algorithm = ["JE", "GCCA"]
 radius = [25, 50, 100, 150, 200, 999]
 size = 100
 
@@ -15,7 +15,6 @@ size = 100
 data =  dataset()
 embed_l, embed_r = (data.load_embeddings("L", algorithm), data.load_embeddings("R", algorithm))
 
-data.subj_list = data.subj_list      ####################
 n_subj = len(data.subj_list)         #################### can be removed and changed to data.N downstream
 n_comps = embed_l[list(embed_l.keys())[0]].shape[2]
 n_ks = len(embed_l.keys())
@@ -111,12 +110,16 @@ from statsmodels.stats.multitest import fdrcorrection
 alpha = 0.05
 
 data = dataset()
+alg_pairs = combinations(algorithm, 2)
+
+print("\n\nComparing the within-subject similarity of vertex distances in physical \nand latent space between algorithms.", 
+      f"\n Compared algorighms: {'\n\t'.join(algorithm)}")
 
 for h in ["L", "R"]:
     t_maps = {}
     p_maps = {}
 
-    alg_pairs = combinations(algorithm, 2)
+    
         
     correlations = np.load(data.outpath(f"All.{h}.within_subj_similarity.npz"))
 
@@ -124,6 +127,9 @@ for h in ["L", "R"]:
     for alg_i, alg_j in alg_pairs:
         param_pairs.extend([ (i, j) for i in correlations.keys() for j in correlations.keys()
                             if i.startswith(alg_i) and j.startswith(alg_j)])
+
+
+    print(f"\nHemisphere:", h, "\nN comparisons:", len(param_pairs))
 
     for param_i, param_j in param_pairs: 
         X = correlations[param_i]
