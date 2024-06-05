@@ -7,7 +7,7 @@ from itertools import combinations
 from os.path import exists
 
 overwrite = True
-algorithm = ["GCCA_r100", "JE_m1500_Cauchy_s100"] #"JE_m1500_Cauchy", "JE_m1500_Gauss", "JE_m1500_linear", "GCCA"]
+algorithm = ["GCCA", "JE"] #"JE_m1500_Cauchy", "JE_m1500_Gauss", "JE_m1500_linear", "GCCA"]
 
 
 data =  dataset()
