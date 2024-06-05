@@ -36,8 +36,8 @@ if pair_idx == 9: ############################# len(data.pairs)-1:
     run_last = False
     while not run_last:
         sleep(60)
-        run_last = all([os.path.exists(data.outpath(f"{subj_i.id}-{subj_j.id}.R.embed_similarity.npz")) 
-                        for subj_i, subj_j in data.pairs])
+        run_last = all([os.path.exists(data.outpath(f"{i}-{j}.R.embed_similarity.npz")) 
+                        for i, j in data.pairs])
 
 correlations_l = {}
 correlations_r = {}
@@ -50,10 +50,12 @@ for k in embed_l.keys():
     correlations_l[k] = vector_wise_corr(embed_l[k][subj_i.idx].T, embed_l[k][subj_j.idx].T).astype("float32")
     correlations_r[k] = vector_wise_corr(embed_r[k][subj_i.idx].T, embed_r[k][subj_j.idx].T).astype("float32")
 
+    print(f"{k} completed")
+
+
 npz_update(data.outpath(f"{subj_i.id}-{subj_j.id}.L.embed_similarity.npz"), correlations_l)
 npz_update(data.outpath(f"{subj_i.id}-{subj_j.id}.R.embed_similarity.npz"), correlations_r)
 
-print(f"{k} completed")
 
 
 # If all pairs are done, stack them for significance testing
