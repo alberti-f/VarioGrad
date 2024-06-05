@@ -18,8 +18,8 @@ print("\tradius of the comparisons:", radius)
 print("\tN vertices sampled per radius:", size)
 
 data =  dataset()
-data.subj_list = data.subj_list[:5]
-data.N = len(data.subj_list)
+data.subj_list = data.subj_list[:5]####################
+data.N = len(data.subj_list)####################
 
 embed_l, embed_r = (data.load_embeddings("L", algorithm), data.load_embeddings("R", algorithm))
 
@@ -126,7 +126,7 @@ alg_pairs = combinations(algorithm, 2)
 print("\n\nComparing the within-subject similarity of vertex distances in physical \nand latent space between algorithms.", 
       f"\n Compared algorighms:\n\t", "\n\t".join(algorithm))
 
-for h in ["L", "R"]:
+for h in ["R"]: ######### "L"
     t_maps = {}
     p_maps = {}
 
@@ -137,6 +137,7 @@ for h in ["L", "R"]:
 
     param_pairs = []
     for alg_i, alg_j in alg_pairs:
+        print(f"\nComparing {alg_i} and {alg_j}") #################
         param_pairs.extend([ (i, j) for i in correlations.keys() for j in correlations.keys()
                             if i.startswith(alg_i) and j.startswith(alg_j) ])
 
