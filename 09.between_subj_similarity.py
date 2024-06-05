@@ -32,7 +32,7 @@ subj_i = subject(subj_pair[0])
 subj_j = subject(subj_pair[1])
 
 # Wait until all subject pairs are done
-if pair_idx == 9: ############################# len(data.pairs)-1:
+if pair_idx == len(data.pairs)-1:
     run_last = False
     while not run_last:
         sleep(60)
