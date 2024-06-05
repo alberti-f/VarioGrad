@@ -2,8 +2,6 @@
 
 import numpy as np
 from variograd_utils import *
-from joblib import Parallel, delayed
-from itertools import combinations
 from os.path import exists
 import sys
 
@@ -49,6 +47,9 @@ npz_update(data.outpath(f"{subj_i.id}-{subj_j.id}.R.embed_similarity.npz"), corr
 
 print(f"{k} completed")
 
+
+# If all pairs are done, stack them for significance testing
+# and remove the individual files
 if pair_idx == 9:      #len(data.pairs)-1:
     print("stacking all pairs for significance testing")
     
@@ -61,16 +62,14 @@ if pair_idx == 9:      #len(data.pairs)-1:
 
         simil_l = np.load(data.outpath(f"{id_i}-{id_j}.L.embed_similarity.npz"))
         for k, v in simil_l.items():
-            correlations_l[k][pair_idx] = v
+            correlations_l[k][pair_idx] = v.astype("float32")
 
         simil_r = np.load(data.outpath(f"{id_i}-{id_j}.R.embed_similarity.npz"))
         for k, v in simil_r.items():
-            correlations_r[k][pair_idx] = v
+            correlations_r[k][pair_idx] = v.astype("float32")
 
         os.remove(data.outpath(f"{id_i}-{id_j}.L.embed_similarity.npz"))
         os.remove(data.outpath(f"{id_i}-{id_j}.R.embed_similarity.npz"))
-
-        
 
 
 ###################################################################################

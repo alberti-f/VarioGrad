@@ -36,7 +36,7 @@ class dataset:
         self.subj_list = np.loadtxt(directories["subj_list"]).astype("int32")
         self.N = len(self.subj_list)
         self.id = f"{self.N}avg"
-        self.pairs = list(combinations(data.subj_list, 2))
+        self.pairs = list(combinations(self.subj_list, 2))
 
         surf_args = np.array(np.meshgrid(["L", "R"], [10, 32], ["midthickness", "cortex_midthickness"]), 
                              dtype="object").T.reshape(-1, 3)
