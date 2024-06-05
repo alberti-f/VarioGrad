@@ -24,4 +24,11 @@ variograd_utils/directories.txt
 # Ignore subject pairs file
 subject_pairs.txt
 
-jobs
+# Ignore job scripts
+jobs/
+
+# Ignor logs
+logs*/
+errs*/
+*.out
+*.err
