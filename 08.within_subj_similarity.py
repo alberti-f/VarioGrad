@@ -124,7 +124,7 @@ data = dataset()
 alg_pairs = combinations(algorithm, 2)
 
 print("\n\nComparing the within-subject similarity of vertex distances in physical \nand latent space between algorithms.", 
-      f"\n Compared algorighms: ", "\n\t".join(algorithm))
+      f"\n Compared algorighms:\n\t", "\n\t".join(algorithm))
 
 for h in ["L", "R"]:
     t_maps = {}
@@ -133,10 +133,12 @@ for h in ["L", "R"]:
         
     correlations = np.load(data.outpath(f"All.{h}.within_subj_similarity.npz"))
 
+    print("\n".join(list(correlations.keys())))
+
     param_pairs = []
     for alg_i, alg_j in alg_pairs:
         param_pairs.extend([ (i, j) for i in correlations.keys() for j in correlations.keys()
-                            if i.startswith(alg_i) and j.startswith(alg_j)])
+                            if i.startswith(alg_i) and j.startswith(alg_j) ])
 
 
     print(f"\nHemisphere:", h, "\nN comparisons:", len(param_pairs))
