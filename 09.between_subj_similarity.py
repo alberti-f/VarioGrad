@@ -7,7 +7,7 @@ from time import sleep
 import sys, os
 
 
-pair_idx = sys.argv[1]-1
+pair_idx = int(sys.argv[1])-1
 
 overwrite = True
 algorithm = ["GCCA", "JE"]
