@@ -18,6 +18,9 @@ print("\tradius of the comparisons:", radius)
 print("\tN vertices sampled per radius:", size)
 
 data =  dataset()
+data.subj_list = data.subj_list[:10]
+data.N = len(data.subj_list)
+
 embed_l, embed_r = (data.load_embeddings("L", algorithm), data.load_embeddings("R", algorithm))
 
 n_comps = embed_l[list(embed_l.keys())[0]].shape[2]
