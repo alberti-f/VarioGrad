@@ -43,7 +43,7 @@ class dataset:
         for h, k, name in surf_args:
             if k==32:
                 path = f"{self.group_dir}/{self.id}.{h}.{name}_MSMAll.{k}k_fs_LR.surf.gii"
-            elif k==10:
+            elif k==0:
                 path = f"{self.mesh10k_dir}/{self.id}.{h}.{name}_MSMAll.{k}k_fs_LR.surf.gii"
 
             setattr(self, f"{h}_{name}_{k}k",  path)

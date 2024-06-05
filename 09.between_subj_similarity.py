@@ -3,7 +3,9 @@
 import numpy as np
 from variograd_utils import *
 from os.path import exists
-import sys
+from time import sleep
+import sys, os
+
 
 pair_idx = sys.argv[1]-1
 
@@ -14,7 +16,6 @@ algorithm = ["GCCA", "JE"]
 data =  dataset()
 embed_l, embed_r = (data.load_embeddings("L", algorithm), data.load_embeddings("R", algorithm))
 
-data.subj_list = data.subj_list      ####################
 n_comps = embed_l[list(embed_l.keys())[0]].shape[2]
 n_ks = len(embed_l.keys())
 vinfo = vertex_info_10k
@@ -30,6 +31,13 @@ subj_pair = data.pairs[pair_idx]
 subj_i = subject(subj_pair[0])
 subj_j = subject(subj_pair[1])
 
+# Wait until all subject pairs are done
+if pair_idx == 9: ############################# len(data.pairs)-1:
+    run_last = False
+    while not run_last:
+        sleep(60)
+        run_last = all([os.path.exists(data.outpath(f"{subj_i.id}-{subj_j.id}.R.embed_similarity.npz")) 
+                        for subj_i, subj_j in data.pairs])
 
 correlations_l = {}
 correlations_r = {}
