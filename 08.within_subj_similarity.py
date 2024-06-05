@@ -6,7 +6,7 @@ from sklearn.metrics.pairwise import euclidean_distances
 from os.path import exists
 
 # Parameters used by the script
-overwrite = False
+overwrite = True
 algorithm = ["JE", "GCCA"]
 radius = [50, 999]
 size = 150
