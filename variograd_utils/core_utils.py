@@ -32,7 +32,7 @@ class dataset:
         self.output_dir = directories["output_dir"]
         self.utils_dir = directories["work_dir"] + "/variograd_utils"
         self.mesh10k_dir = directories["mesh10k_dir"]
-
+        
         self.subj_list = np.loadtxt(directories["subj_list"]).astype("int32")
         self.N = len(self.subj_list)
         self.id = f"{self.N}avg"
@@ -43,7 +43,7 @@ class dataset:
         for h, k, name in surf_args:
             if k==32:
                 path = f"{self.group_dir}/{self.id}.{h}.{name}_MSMAll.{k}k_fs_LR.surf.gii"
-            elif k==0:
+            elif k==10:
                 path = f"{self.mesh10k_dir}/{self.id}.{h}.{name}_MSMAll.{k}k_fs_LR.surf.gii"
 
             setattr(self, f"{h}_{name}_{k}k",  path)
