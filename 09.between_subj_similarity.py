@@ -60,26 +60,26 @@ npz_update(data.outpath(f"{subj_i.id}-{subj_j.id}.R.embed_similarity.npz"), corr
 
 # If all pairs are done, stack them for significance testing
 # and remove the individual files
-if pair_idx == 9:      #len(data.pairs)-1:
-    print("stacking all pairs for significance testing")
+# if pair_idx == 9:      #len(data.pairs)-1:
+#     print("stacking all pairs for significance testing")
     
-    correlations_l = {k : np.zeros([len(data.pairs), vinfo.grayl.size]) for k in embed_l.keys()}
-    correlations_r = {k : np.zeros([len(data.pairs), vinfo.grayr.size]) for k in embed_r.keys()}
+#     correlations_l = {k : np.zeros([len(data.pairs), vinfo.grayl.size]) for k in embed_l.keys()}
+#     correlations_r = {k : np.zeros([len(data.pairs), vinfo.grayr.size]) for k in embed_r.keys()}
 
-    for id_i, id_j in data.pairs:
-        idx_i = subject(id_i).idx
-        idx_j = subject(id_j).idx
+#     for id_i, id_j in data.pairs:
+#         idx_i = subject(id_i).idx
+#         idx_j = subject(id_j).idx
 
-        simil_l = np.load(data.outpath(f"{id_i}-{id_j}.L.embed_similarity.npz"))
-        for k, v in simil_l.items():
-            correlations_l[k][pair_idx] = v.astype("float32")
+#         simil_l = np.load(data.outpath(f"{id_i}-{id_j}.L.embed_similarity.npz"))
+#         for k, v in simil_l.items():
+#             correlations_l[k][pair_idx] = v.astype("float32")
 
-        simil_r = np.load(data.outpath(f"{id_i}-{id_j}.R.embed_similarity.npz"))
-        for k, v in simil_r.items():
-            correlations_r[k][pair_idx] = v.astype("float32")
+#         simil_r = np.load(data.outpath(f"{id_i}-{id_j}.R.embed_similarity.npz"))
+#         for k, v in simil_r.items():
+#             correlations_r[k][pair_idx] = v.astype("float32")
 
-        os.remove(data.outpath(f"{id_i}-{id_j}.L.embed_similarity.npz"))
-        os.remove(data.outpath(f"{id_i}-{id_j}.R.embed_similarity.npz"))
+#         os.remove(data.outpath(f"{id_i}-{id_j}.L.embed_similarity.npz"))
+#         os.remove(data.outpath(f"{id_i}-{id_j}.R.embed_similarity.npz"))
 
 
 ###################################################################################
