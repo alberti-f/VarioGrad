@@ -126,7 +126,7 @@ alg_pairs = combinations(algorithm, 2)
 print("\n\nComparing the within-subject similarity of vertex distances in physical \nand latent space between algorithms.", 
       f"\n Compared algorighms:\n\t", "\n\t".join(algorithm))
 
-for h in ["R"]: ######### "L"
+for h in ["L", "R"]:
     t_maps = {}
     p_maps = {}
 
