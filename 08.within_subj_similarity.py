@@ -18,8 +18,6 @@ print("\tradius of the comparisons:", radius)
 print("\tN vertices sampled per radius:", size)
 
 data =  dataset()
-data.subj_list = data.subj_list[:5]####################
-data.N = len(data.subj_list)####################
 
 embed_l, embed_r = (data.load_embeddings("L", algorithm), data.load_embeddings("R", algorithm))
 
@@ -130,20 +128,17 @@ for h in ["L", "R"]:
     t_maps = {}
     p_maps = {}
 
-        
+    # find pairs of parameters to compare between algorithms
     correlations = np.load(data.outpath(f"All.{h}.within_subj_similarity.npz"))
-
-    print("\n".join(list(correlations.keys())))
-
     param_pairs = []
     for alg_i, alg_j in alg_pairs:
-        print(f"\nComparing {alg_i} and {alg_j}") #################
         param_pairs.extend([ (i, j) for i in correlations.keys() for j in correlations.keys()
                             if i.startswith(alg_i) and j.startswith(alg_j) ])
 
 
     print(f"\nHemisphere:", h, "\nN comparisons:", len(param_pairs))
 
+    # t-test for each pair of parameters
     for param_i, param_j in param_pairs: 
         X = correlations[param_i]
         Y = correlations[param_j]
@@ -152,6 +147,10 @@ for h in ["L", "R"]:
 
         t_maps[f"{param_i}-vs-{param_j}"] = results.statistic
         p_maps[f"{param_i}-vs-{param_j}"] = pvalues
+
+        print(f"\t{param_i} vs {param_j}:",
+              f"\t\t Percent significant: \t{np.sum(pvalues<alpha) / pvalues.size}%",
+              f"\t\t Average t-value: \t{np.nanmean(results.statistic[pvalues<alpha])}")
 
     npz_update(data.outpath(f"{data.id}.{h}.wss_t_maps.npz"), t_maps)
     npz_update(data.outpath(f"{data.id}.{h}.wss_p_maps.npz"), p_maps)
