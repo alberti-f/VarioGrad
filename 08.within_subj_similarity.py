@@ -56,8 +56,6 @@ radius_masks_r = {}
 for r in radius:
     radius_masks_r[r] = np.apply_along_axis(random_masking, 0, data.load_gdist_matrix("R").astype("int32"), rad=r, size=size)
 
-embeddings_l = data.load_embeddings("L")
-embeddings_r = data.load_embeddings("R")
 
 print("Iterating over subjects:")
 # Compute the correlation between the vertex distances in physical and latent space
@@ -72,7 +70,7 @@ for id in data.subj_list:
         if k in skip_algs_l and not overwrite:
             continue
 
-        edist_matrix = euclidean_distances(embeddings_l[k][subj.idx]).astype("float32")
+        edist_matrix = euclidean_distances(embed_l[k][subj.idx]).astype("float32")
 
         for i, r in enumerate(radius):
 
@@ -88,7 +86,7 @@ for id in data.subj_list:
         if k in skip_algs_r and not overwrite:
             continue
 
-        edist_matrix = euclidean_distances(embeddings_r[k][subj.idx]).astype("float32")
+        edist_matrix = euclidean_distances(embed_r[k][subj.idx]).astype("float32")
 
         for i, r in enumerate(radius):
 
