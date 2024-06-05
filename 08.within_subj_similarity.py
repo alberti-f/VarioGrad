@@ -124,7 +124,7 @@ data = dataset()
 alg_pairs = combinations(algorithm, 2)
 
 print("\n\nComparing the within-subject similarity of vertex distances in physical \nand latent space between algorithms.", 
-      f"\n Compared algorighms: {'\n\t'.join(algorithm)}")
+      f"\n Compared algorighms: ", "\n\t".join(algorithm))
 
 for h in ["L", "R"]:
     t_maps = {}
