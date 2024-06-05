@@ -121,7 +121,7 @@ from statsmodels.stats.multitest import fdrcorrection
 alpha = 0.05
 
 data = dataset()
-alg_pairs = combinations(algorithm, 2)
+alg_pairs = list(combinations(algorithm, 2))
 
 print("\n\nComparing the within-subject similarity of vertex distances in physical \nand latent space between algorithms.", 
       f"\n Compared algorighms:\n\t", "\n\t".join(algorithm))
@@ -134,8 +134,6 @@ for h in ["L", "R"]:
     correlations = np.load(data.outpath(f"All.{h}.within_subj_similarity.npz"))
 
     print("\n".join(list(correlations.keys())))
-    print("\n")
-    print("\n".join(alg_pairs))
 
     param_pairs = []
     for alg_i, alg_j in alg_pairs:
