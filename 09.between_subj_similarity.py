@@ -67,8 +67,10 @@ algorithms = list(embed_l.keys())
 filenames_l = [data.outpath(f"All.L.bwsim.{k}.npz") for k in algorithms]
 filenames_r = [data.outpath(f"All.R.bwsim.{k}.npz") for k in algorithms]
 
+print("Preallocating empty files:\n")
 for f in filenames_l + filenames_r:
     np.savez(f, np.zeros([len(data.pairs), vinfo.grayl.size], dtype="float32"))
+    print("\t", f)
 
 for i, j in data.pairs[:10]:
     if not (exists(data.outpath(f"{i}-{j}.L.embed_similarity.npz")) and exists(data.outpath(f"{i}-{j}.R.embed_similarity.npz"))):
