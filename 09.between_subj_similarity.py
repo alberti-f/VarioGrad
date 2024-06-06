@@ -70,7 +70,7 @@ filenames_r = [data.outpath(f"All.R.bwsim.{k}.npz") for k in algorithms]
 for f in filenames_l + filenames_r:
     np.savez(f, np.zeros([len(data.pairs), vinfo.grayl.size], dtype="float32"))
 
-for i, j in data.pairs:
+for i, j in data.pairs[:10]:
     if not (exists(data.outpath(f"{i}-{j}.L.embed_similarity.npz")) and exists(data.outpath(f"{i}-{j}.R.embed_similarity.npz"))):
             print(f"Missing pair {i}-{j}")
             continue
@@ -85,43 +85,4 @@ for i, j in data.pairs:
         bwsim_r[pair_idx] = np.load(data.outpath(f"{i}-{j}.R.embed_similarity.npz"))[file.split(".")[-2]]
         bwsim_r.flush()
 
-
-
-
-        
-
-
-
-
-
-for key in keys:
-    
-        
-        bwsim_l = np.load(data.outpath(f"{i}-{j}.L.embed_similarity.npz"))
-        bwsim_r = np.load(data.outpath(f"{i}-{j}.R.embed_similarity.npz"))
-
-        correlations_l[data.pairs.index((i, j))] = bwsim_l[key]
-        correlations_r[data.pairs.index((i, j))] = bwsim_r[key]
-
-
-
-if pair_idx == len(data.pairs)-1:
-    print("stacking all pairs for significance testing")
-    
-
-
-    for id_i, id_j in data.pairs:
-        idx_i = subject(id_i).idx
-        idx_j = subject(id_j).idx
-
-        simil_l = np.load(data.outpath(f"{id_i}-{id_j}.L.embed_similarity.npz"))
-        for k, v in simil_l.items():
-            correlations_l[k][pair_idx] = v.astype("float32")
-
-        simil_r = np.load(data.outpath(f"{id_i}-{id_j}.R.embed_similarity.npz"))
-        for k, v in simil_r.items():
-            correlations_r[k][pair_idx] = v.astype("float32")
-
-        os.remove(data.outpath(f"{id_i}-{id_j}.L.embed_similarity.npz"))
-        os.remove(data.outpath(f"{id_i}-{id_j}.R.embed_similarity.npz"))
 
