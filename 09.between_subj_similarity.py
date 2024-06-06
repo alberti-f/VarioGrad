@@ -80,7 +80,7 @@ for f in filenames_l + filenames_r:
 
 print("Updating files:\n")
 for file in filenames_l[:1]:
-    bwsim_l = np.load(file, mmap_mode="r+", dtype="float32")
+    bwsim_l = np.load(file, mmap_mode="r+")
 
     for i, j in data.pairs[:3]:
         if not (exists(data.outpath(f"{i}-{j}.L.embed_similarity.npz")) and exists(data.outpath(f"{i}-{j}.R.embed_similarity.npz"))):
@@ -95,7 +95,7 @@ for file in filenames_l[:1]:
 
 
 for file in filenames_r[:1]:
-    bwsim_r = np.load(file, mmap_mode="r+", dtype="float32")
+    bwsim_r = np.load(file, mmap_mode="r+")
 
     for i, j in data.pairs[:3]:
         if not (exists(data.outpath(f"{i}-{j}.L.embed_similarity.npz")) and exists(data.outpath(f"{i}-{j}.R.embed_similarity.npz"))):
