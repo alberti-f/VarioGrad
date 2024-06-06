@@ -70,10 +70,15 @@ filenames_r = [data.outpath(f"All.R.bwsim.{k}.npy") for k in algorithms]
 print("Preallocating empty files:\n")
 for f in filenames_l + filenames_r:
     if exists(f) and not overwrite:
+        print("\t", f, "already exists")
         continue
-    np.savez(f, np.zeros([len(data.pairs), vinfo.grayl.size], dtype="float32"))
+
+    np.save(f, np.zeros([len(data.pairs), vinfo.grayl.size], dtype="float32"))
     print("\t", f)
 
+
+
+print("Updating files:\n")
 for file in filenames_l[:1]:
     bwsim_l = np.load(file, mmap_mode="r+", dtype="float32")
 
@@ -86,6 +91,7 @@ for file in filenames_l[:1]:
 
     bwsim_l.flush()    
     print(f"File {file} completed for L")
+
 
 
 for file in filenames_r[:1]:
