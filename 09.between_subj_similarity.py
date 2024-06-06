@@ -64,15 +64,15 @@ subj_j = subject(subj_pair[1])
 # and remove the individual files
 
 algorithms = list(embed_l.keys())
-filenames_l = [data.outpath(f"All.L.bwsim.{k}.npz") for k in algorithms]
-filenames_r = [data.outpath(f"All.R.bwsim.{k}.npz") for k in algorithms]
+filenames_l = [data.outpath(f"All.L.bwsim.{k}.npy") for k in algorithms]
+filenames_r = [data.outpath(f"All.R.bwsim.{k}.npy") for k in algorithms]
 
 print("Preallocating empty files:\n")
 for f in filenames_l + filenames_r:
     np.savez(f, np.zeros([len(data.pairs), vinfo.grayl.size], dtype="float32"))
     print("\t", f)
 
-for i, j in data.pairs[:10]:
+for i, j in data.pairs[:3]:
     if not (exists(data.outpath(f"{i}-{j}.L.embed_similarity.npz")) and exists(data.outpath(f"{i}-{j}.R.embed_similarity.npz"))):
             print(f"Missing pair {i}-{j}")
             continue
@@ -81,10 +81,14 @@ for i, j in data.pairs[:10]:
         bwsim_l = np.load(file, mmap_mode="r+", dtype="float32")
         bwsim_l[pair_idx] = np.load(data.outpath(f"{i}-{j}.L.embed_similarity.npz"))[file.split(".")[-2]]
         bwsim_l.flush()
+    
+    print(f"Pair {i}-{j} completed for L")
 
     for file in filenames_r:
         bwsim_r = np.load(file, mmap_mode="r+", dtype="float32")
         bwsim_r[pair_idx] = np.load(data.outpath(f"{i}-{j}.R.embed_similarity.npz"))[file.split(".")[-2]]
         bwsim_r.flush()
+    
+    print(f"Pair {i}-{j} completed for R")
 
 
