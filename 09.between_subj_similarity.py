@@ -9,7 +9,7 @@ import sys, os
 
 pair_idx = int(sys.argv[1])-1
 
-overwrite = True
+overwrite = False
 algorithm = ["GCCA", "JE"]
 
 
@@ -69,26 +69,36 @@ filenames_r = [data.outpath(f"All.R.bwsim.{k}.npy") for k in algorithms]
 
 print("Preallocating empty files:\n")
 for f in filenames_l + filenames_r:
+    if exists(f) and not overwrite:
+        continue
     np.savez(f, np.zeros([len(data.pairs), vinfo.grayl.size], dtype="float32"))
     print("\t", f)
 
-for i, j in data.pairs[:3]:
-    if not (exists(data.outpath(f"{i}-{j}.L.embed_similarity.npz")) and exists(data.outpath(f"{i}-{j}.R.embed_similarity.npz"))):
-            print(f"Missing pair {i}-{j}")
-            continue
-    
-    for file in filenames_l:
-        bwsim_l = np.load(file, mmap_mode="r+", dtype="float32")
-        bwsim_l[pair_idx] = np.load(data.outpath(f"{i}-{j}.L.embed_similarity.npz"))[file.split(".")[-2]]
-        bwsim_l.flush()
-    
-    print(f"Pair {i}-{j} completed for L")
+for file in filenames_l[:1]:
+    bwsim_l = np.load(file, mmap_mode="r+", dtype="float32")
 
-    for file in filenames_r:
-        bwsim_r = np.load(file, mmap_mode="r+", dtype="float32")
+    for i, j in data.pairs[:3]:
+        if not (exists(data.outpath(f"{i}-{j}.L.embed_similarity.npz")) and exists(data.outpath(f"{i}-{j}.R.embed_similarity.npz"))):
+                print(f"Missing pair {i}-{j}")
+                continue        
+        
+        bwsim_l[pair_idx] = np.load(data.outpath(f"{i}-{j}.L.embed_similarity.npz"))[file.split(".")[-2]]
+
+    bwsim_l.flush()    
+    print(f"File {file} completed for L")
+
+
+for file in filenames_r[:1]:
+    bwsim_r = np.load(file, mmap_mode="r+", dtype="float32")
+
+    for i, j in data.pairs[:3]:
+        if not (exists(data.outpath(f"{i}-{j}.L.embed_similarity.npz")) and exists(data.outpath(f"{i}-{j}.R.embed_similarity.npz"))):
+                print(f"Missing pair {i}-{j}")
+                continue
+        
         bwsim_r[pair_idx] = np.load(data.outpath(f"{i}-{j}.R.embed_similarity.npz"))[file.split(".")[-2]]
-        bwsim_r.flush()
-    
-    print(f"Pair {i}-{j} completed for R")
+
+    bwsim_r.flush()    
+    print(f"File {file} completed for R")
 
 
