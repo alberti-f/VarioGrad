@@ -34,7 +34,7 @@ subj_j = subject(subj_pair[1])
 
 print("\n\nSubject pair:", subj_i.id, subj_j.id)
 
-# Wait until all subject pairs are done
+# Wait until all subject pairs are done to execute last one
 if pair_idx == len(data.pairs)-1:
     print("\nWaiting for all pairs to be done before running the last one")
     run_last = False
@@ -44,7 +44,8 @@ if pair_idx == len(data.pairs)-1:
         run_last = all([os.path.exists(data.outpath(f"{i}-{j}.R.embed_similarity.npz")) 
                         for i, j in data.pairs])
     
-sleep(30)
+    sleep(30)
+
 
 print("\n\nComputing correlation of embeddings\n")
 correlations_l = {}
@@ -70,70 +71,72 @@ npz_update(data.outpath(f"{subj_i.id}-{subj_j.id}.R.embed_similarity.npz"), corr
 
 # If all pairs are done, stack them for significance testing
 # and remove the individual files
+if pair_idx == len(data.pairs)-1:
+    print("\n\nStacking all pairs for significance testing\n")
+    
+    algorithms = list(embed_l.keys())
+    filenames_l = [data.outpath(f"All.L.bwsim.{k}.npy") for k in algorithms]
+    filenames_r = [data.outpath(f"All.R.bwsim.{k}.npy") for k in algorithms]
 
-algorithms = list(embed_l.keys())
-filenames_l = [data.outpath(f"All.L.bwsim.{k}.npy") for k in algorithms]
-filenames_r = [data.outpath(f"All.R.bwsim.{k}.npy") for k in algorithms]
+    # Preallocating files
+    print("Preallocating empty files:\n")
+    for f in filenames_l:
+        if exists(f) and not overwrite:
+            print("\t", f, "already exists")
+            continue
 
-# Preallocating files
-print("Preallocating empty files:\n")
-for f in filenames_l:
-    if exists(f) and not overwrite:
-        print("\t", f, "already exists")
-        continue
+        np.save(f, np.zeros([len(data.pairs), vinfo.grayl.size], dtype="float32"))
+        print("\t", f)
 
-    np.save(f, np.zeros([len(data.pairs), vinfo.grayl.size], dtype="float32"))
-    print("\t", f)
+    for f in filenames_r:
+        if exists(f) and not overwrite:
+            print("\t", f, "already exists")
+            continue
 
-for f in filenames_r:
-    if exists(f) and not overwrite:
-        print("\t", f, "already exists")
-        continue
-
-    np.save(f, np.zeros([len(data.pairs), vinfo.grayr.size], dtype="float32"))
-    print("\t", f)
-
-
-
-
-print("\n\nUpdating group files:\n")
-
-from datetime import datetime
-now = datetime.now()
-current_time = now.strftime("%H:%M:%S")
-print(f"\n\tStart = {current_time}")
+        np.save(f, np.zeros([len(data.pairs), vinfo.grayr.size], dtype="float32"))
+        print("\t", f)
 
 
-print("\n\tLeft hemisphere")
-for file in filenames_l:
-    bwsim_l = np.load(file, mmap_mode="r+")
-
-    for idx, (i, j) in enumerate(data.pairs):
-        if not (exists(data.outpath(f"{i}-{j}.L.embed_similarity.npz")) and exists(data.outpath(f"{i}-{j}.R.embed_similarity.npz"))):
-                print(f"Missing pair {i}-{j}")
-                continue        
-        
-        bwsim_l[idx] = np.load(data.outpath(f"{i}-{j}.L.embed_similarity.npz"))[file.split(".")[-2]]
-
-    bwsim_l.flush()    
-    print(f"\t\t{file} done")
 
 
-print("\n\tRight hemisphere")
-for file in filenames_r:
-    bwsim_r = np.load(file, mmap_mode="r+")
+    print("\n\nUpdating group files:\n")
 
-    for idx, (i, j) in enumerate(data.pairs):
-        if not (exists(data.outpath(f"{i}-{j}.L.embed_similarity.npz")) and exists(data.outpath(f"{i}-{j}.R.embed_similarity.npz"))):
-                print(f"Missing pair {i}-{j}")
-                continue
-        
-        bwsim_r[idx] = np.load(data.outpath(f"{i}-{j}.R.embed_similarity.npz"))[file.split(".")[-2]]
-
-    bwsim_r.flush()    
-    print(f"\t\t{file} done")
+    from datetime import datetime
+    now = datetime.now()
+    current_time = now.strftime("%H:%M:%S")
+    print(f"\n\tStart = {current_time}")
 
 
-now = datetime.now()
-current_time = now.strftime("%H:%M:%S")
-print(f"\n\tEnd = {current_time}\n")
+    print("\n\tLeft hemisphere")
+    for file in filenames_l:
+        bwsim_l = np.load(file, mmap_mode="r+")
+
+        for idx, (i, j) in enumerate(data.pairs):
+            if not (exists(data.outpath(f"{i}-{j}.L.embed_similarity.npz")) and exists(data.outpath(f"{i}-{j}.R.embed_similarity.npz"))):
+                    print(f"Missing pair {i}-{j}")
+                    continue        
+            
+            bwsim_l[idx] = np.load(data.outpath(f"{i}-{j}.L.embed_similarity.npz"))[file.split(".")[-2]]
+
+        bwsim_l.flush()    
+        print(f"\t\t{file} done")
+
+
+    print("\n\tRight hemisphere")
+    for file in filenames_r:
+        bwsim_r = np.load(file, mmap_mode="r+")
+
+        for idx, (i, j) in enumerate(data.pairs):
+            if not (exists(data.outpath(f"{i}-{j}.L.embed_similarity.npz")) and exists(data.outpath(f"{i}-{j}.R.embed_similarity.npz"))):
+                    print(f"Missing pair {i}-{j}")
+                    continue
+            
+            bwsim_r[idx] = np.load(data.outpath(f"{i}-{j}.R.embed_similarity.npz"))[file.split(".")[-2]]
+
+        bwsim_r.flush()    
+        print(f"\t\t{file} done")
+
+
+    now = datetime.now()
+    current_time = now.strftime("%H:%M:%S")
+    print(f"\n\tEnd = {current_time}\n")
