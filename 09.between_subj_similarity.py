@@ -42,7 +42,7 @@ if pair_idx == len(data.pairs)-1:
         print("\t...")
         sleep(30)
         run_last = all([os.path.exists(data.outpath(f"{i}-{j}.R.embed_similarity.npz")) 
-                        for i, j in data.pairs])
+                        for i, j in data.pairs[:-1]])
     
     sleep(30)
 
