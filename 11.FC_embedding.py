@@ -20,6 +20,7 @@ tseries32k = subj.dir + "/MNINonLinear/Results/rfMRI_{0}/rfMRI_{0}_Atlas_MSMAll_
 tseries32k_gii = subj.outpath(f"{id}." + "{0}.rfMRI_{1}_Atlas_MSMAll.32k_fs_LR.func.gii")
 sphere32k = data.group_dir + "/S1200.{0}.sphere.32k_fs_LR.surf.gii"
 sphere10k = data.mesh10k_dir + "/S1200.{0}.sphere.10k_fs_LR.surf.gii"
+fc_matrix = subj.outpath(f"{data.id}.REST_FC.10k_fs_LR.dconn.nii")
 
 print("\n\n\nSubject:", id)
 print("\n\nPredefined Paths:")
@@ -105,6 +106,20 @@ print("\n\nOutput CIFTI:\n\t", tseries10k)
 os.remove(tseries10k_gii.format('L', 'REST'))
 os.remove(tseries10k_gii.format('R', 'REST'))
 
+
+if idx == len(data.subj_list)-1:
+    
+    n_vertices = vertex_info_10k.num_meshl + vertex_info_10k.num_meshr
+    M = np.zeros((n_vertices, n_vertices))
+
+    for id in data.subj_list:
+        subj = subject(id)
+        tseries = nib.load(subj.outpath(f"{id}.rfMRI_REST_Atlas_MSMAll.10k_fs_LR.dtseries.nii")).get_fdata()
+        M += np.corrcoef(tseries.T)
+
+    M /= len(data.subj_list)
+
+    np.save(fc_matrix, M)
 
 
 
