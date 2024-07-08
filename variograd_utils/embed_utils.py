@@ -133,30 +133,90 @@ def joint_laplacian(M, R, C=None, kernel=None, similarity=None, scale=50, space=
 
 
 def reference_laplacian(R, kernel=None, similarity=None, scale=50, laplacian="normalized"):
-        
-        # Apply kernel to matrices
-        if kernel is not None:
-            R = kernelize(R, kernel=kernel, scale=scale)
-        
-        # Convert to affinity and compute correspondence matrix
-        if similarity is not None:
-            R = affinity(R, method=similarity)
-        
-        # Calculate degree
-        D = np.sum(R, axis=1).reshape(-1, 1)
+    '''
+    Compute the Laplacian matrix for the reference embedding
     
-        # Compute the Laplacian matrix
-        if laplacian == "unnormalized":
-            L = np.diag(D.squeeeze()) - R
-        else:
-            L = - R / np.sqrt(D @ D.T)
+    Parameters
+    ----------
+    R : array-like
+        The reference matrix
+    kernel : str, optional
+        The kernel to apply. Options are "cauchy", "log", "gauss", "linear" (default=None)
+    affinity : str, optional
+        The method to compute the affinity. Options are "cosine", "correlation" (default=None)
+    scale : float, optional
+        The scaling parameter for the kernel (default=50)
+    laplacian : str, optional
+        The type of Laplacian to compute. Options are "normalized", "unnormalized" (default="normalized")
+        
+    Returns
+    -------
+    L : array-like
+        The reference Laplacian matrix
     
-        return L
+    '''
+    # Apply kernel to matrices
+    if kernel is not None:
+        R = kernelize(R, kernel=kernel, scale=scale)
+    
+    # Convert to affinity and compute correspondence matrix
+    if similarity is not None:
+        R = affinity(R, method=similarity)
+    
+    # Calculate degree
+    D = np.sum(R, axis=1).reshape(-1, 1)
+
+    # Compute the Laplacian matrix
+    if laplacian == "unnormalized":
+        L = np.diag(D.squeeeze()) - R
+    else:
+        L = - R / np.sqrt(D @ D.T)
+
+    return L
 
 
 
 def joint_embedding(M, R, C=None, n_components=2, kernel=None, similarity=None, scale=50, space=None, 
                     laplacian="normalized", overwrite=False, svd_kws=None, return_ref=False, rotate=True):
+    '''
+    Compute the joint embedding of two matrices M and R
+    
+    Parameters
+    ----------
+    M : array-like
+        The target matrix   
+    R : array-like
+        The reference matrix
+    C : array-like, optional
+        The correspondence matrix (default=None)
+    n_components : int, optional
+        The number of components to compute (default=2)
+    kernel : str, optional
+        The kernel to apply. Options are "cauchy", "log", "gauss", "linear" (default=None)
+    
+    similarity : str, optional
+        The method to compute the affinity. Options are "cosine", "correlation" (default=None)
+    scale : float, optional
+        The scaling parameter for the kernel (default=50)
+    space : float, optional
+        The scaling parameter for the correspondence matrix (default=None)
+    laplacian : str, optional
+        The type of Laplacian to compute. Options are "normalized", "unnormalized" (default="normalized")
+        overwrite : bool, optional
+        Whether to overwrite the input matrices (default=False)
+    svd_kws : dict, optional
+        Additional keyword arguments for TruncatedSVD (default=None)
+    return_ref : bool, optional
+        Whether to return the reference embedding (default=False)
+    rotate : bool, optional
+        Whether to rotate the joint embedding (default=True)
+    
+    Returns
+    -------
+    B : array-like
+        The joint embedding
+    A : array-like
+        The reference embedding'''
 
     N = M.shape[0]
     if M.shape != R.shape:
