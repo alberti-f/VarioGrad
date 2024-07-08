@@ -20,7 +20,7 @@ tseries32k = subj.dir + "/MNINonLinear/Results/rfMRI_{0}/rfMRI_{0}_Atlas_MSMAll_
 tseries32k_gii = subj.outpath(f"{id}." + "{0}.rfMRI_{1}_Atlas_MSMAll.32k_fs_LR.func.gii")
 sphere32k = data.group_dir + "/S1200.{0}.sphere.32k_fs_LR.surf.gii"
 sphere10k = data.mesh10k_dir + "/S1200.{0}.sphere.10k_fs_LR.surf.gii"
-fc_matrix = subj.outpath(f"{data.id}.REST_FC.10k_fs_LR.dconn.nii")
+fc_matrix = data.outpath(f"{data.id}.REST_FC.10k_fs_LR.npy")
 
 print("\n\n\nSubject:", id)
 print("\n\nPredefined Paths:")
