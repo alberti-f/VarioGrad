@@ -347,10 +347,7 @@ def joint_embedding(M, R, C=None, n_components=2, method="svd", kernel=None, sim
     # Compute the eigenvectors and eigenvalues
     components = embed_matrix(L, n_components=n_components, method=method, method_kws=method_kws)
     A, B = components[:, :N], components[:, N:]
-    
-    print("Shape of A:", A.shape)
-    print("Shape of B:", B.shape)
-    print("Shape of components:", components.shape)
+
 
     # Orthogonality check
     orthogonality = np.dot(components, components.T)
