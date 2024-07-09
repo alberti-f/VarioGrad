@@ -19,7 +19,7 @@ W[W < np.percentile(W, threshold, axis=0)] = 0
 
 # Load individual timeseries and threshold
 M = nib.load(subject(subj.id).outpath(f"{subj.id}.rfMRI_REST_Atlas_MSMAll.10k_fs_LR.dtseries.nii")).get_fdata().astype("float32")[:, cortex]
-M = np.corrcoef(M[:, :s].T)
+M = np.corrcoef(M.T)
 M[M < 0] = 0
 M[M < np.percentile(M, threshold, axis=0)] = 0
 
