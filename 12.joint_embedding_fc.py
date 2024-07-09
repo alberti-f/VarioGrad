@@ -13,7 +13,7 @@ cortex = np.hstack([vertex_info_10k.grayl, vertex_info_10k.grayr + vertex_info_1
 threshold = 95
 
 # Loand and threshold group average FC matrix
-W = np.load(data.outpath(f"{data.id}.REST_FC.10k_fs_LR.npy")).astype("float32")[cortex, cortex]
+W = np.load(data.outpath(f"{data.id}.REST_FC.10k_fs_LR.npy")).astype("float32")
 W[W < 0] = 0
 W[W < np.percentile(W, threshold, axis=0)] = 0
 
