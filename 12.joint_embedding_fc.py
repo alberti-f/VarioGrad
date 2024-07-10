@@ -3,8 +3,10 @@ import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 import nibabel as nib
 import sys
+import psutil
 
 idx = int(sys.argv[1])-1
+process = psutil.Process()
 
 data = dataset()
 id = data.subj_list[idx]
@@ -16,6 +18,7 @@ threshold = 95
 W = np.load(data.outpath(f"{data.id}.REST_FC.10k_fs_LR.npy")).astype("float32")[:, cortex][cortex, :]
 W[W < 0] = 0
 W[W < np.percentile(W, threshold, axis=0)] = 0
+print(f"\n\tMemory used: {process.memory_info().rss / (1024 ** 3):.2f} GB\n")
 
 # Load individual timeseries and threshold
 M = nib.load(subject(subj.id).outpath(f"{subj.id}.rfMRI_REST_Atlas_MSMAll.10k_fs_LR.dtseries.nii")).get_fdata().astype("float32")[:, cortex]
@@ -23,6 +26,7 @@ print(np.any(np.isnan(M)))
 M = np.corrcoef(M.T)
 M[M < 0] = 0
 M[M < np.percentile(M, threshold, axis=0)] = 0
+print(f"\n\tMemory used: {process.memory_info().rss / (1024 ** 3):.2f} GB\n")
 
 if np.any(np.isnan(M)) or np.any(np.isnan(W)):
     raise ValueError(f"NaN values in FC matrices. Subject {id} not processed.")
@@ -31,10 +35,13 @@ if np.any(np.isnan(M)) or np.any(np.isnan(W)):
 C = cosine_similarity(M.T, W.T)
 W = cosine_similarity(W.T)
 M = cosine_similarity(M.T)
+print(f"\n\tMemory used: {process.memory_info().rss / (1024 ** 3):.2f} GB\n")
 
 # Compute joint diffusion map embedding
 kws = {"alpha": 0.5, "diffusion_time": 0}
-embedding = joint_embedding(M, W, C=C, n_components=10, method="diffusion", rotate=False, normalize=False, method_kws=kws)
+embedding = joint_embedding(M, W, C=C, n_components=10, method="diffusion", method_kws=kws, 
+                            rotate=False, normalize=False, overwrite=True)
+print(f"\n\tMemory used: {process.memory_info().rss / (1024 ** 3):.2f} GB\n")
 
 # Save embedding
 np.save(subj.outpath(f"{subj.id}.REST_FC_embedding.npy"), embedding)
