@@ -13,7 +13,7 @@ cortex = np.hstack([vertex_info_10k.grayl, vertex_info_10k.grayr + vertex_info_1
 threshold = 95
 
 # Loand and threshold group average FC matrix
-W = np.load(data.outpath(f"{data.id}.REST_FC.10k_fs_LR.npy")).astype("float32")
+W = np.load(data.outpath(f"{data.id}.REST_FC.10k_fs_LR.npy")).astype("float32")[:, cortex][cortex, :]
 W[W < 0] = 0
 W[W < np.percentile(W, threshold, axis=0)] = 0
 
@@ -24,14 +24,17 @@ M = np.corrcoef(M.T)
 M[M < 0] = 0
 M[M < np.percentile(M, threshold, axis=0)] = 0
 
+if np.any(np.isnan(M)) or np.any(np.isnan(W)):
+    raise ValueError(f"NaN values in FC matrices. Subject {id} not processed.")
+
 # Compute adjacency matrices
 C = cosine_similarity(M.T, W.T)
 W = cosine_similarity(W.T)
 M = cosine_similarity(M.T)
 
 # Compute joint diffusion map embedding
-kws = {"alpha": 0.5, "affinity":"precomputed"}
-embedding = joint_embedding(M, W, C=C, n_components=10, method="diffusion", rotate=False)
+kws = {"alpha": 0.5, "diffusion_time": 0}
+embedding = joint_embedding(M, W, C=C, n_components=10, method="diffusion", rotate=False, normalize=False, method_kws=kws)
 
 # Save embedding
 np.save(subj.outpath(f"{subj.id}.REST_FC_embedding.npy"), embedding)
