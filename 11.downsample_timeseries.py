@@ -20,7 +20,9 @@ tseries32k = subj.dir + "/MNINonLinear/Results/rfMRI_{0}/rfMRI_{0}_Atlas_MSMAll_
 tseries32k_gii = subj.outpath(f"{id}." + "{0}.rfMRI_{1}_Atlas_MSMAll.32k_fs_LR.func.gii")
 sphere32k = data.group_dir + "/S1200.{0}.sphere.32k_fs_LR.surf.gii"
 sphere10k = data.mesh10k_dir + "/S1200.{0}.sphere.10k_fs_LR.surf.gii"
+subj_surf10k = "{0}_midthickness_10k_T1w"
 fc_matrix = data.outpath(f"{data.id}.REST_FC.10k_fs_LR.npy")
+fwhm = 4
 
 print("\n\n\nSubject:", id)
 print("\n\nPredefined Paths:")
@@ -47,6 +49,13 @@ for r in runs:
     
 
     for h in ["L", "R"]:
+        smooth = f"wb_command -metric-smoothing {subj_surf10k.format(h)} \
+            {tseries32k_gii.format(h, r)} \
+                {fwhm} \
+                    {tseries32k_gii.format(h, r)} \
+                        -fwhm"
+        run(smooth, shell=True)
+
         resample = f"wb_command -metric-resample {tseries32k_gii.format(h, r)} \
             {sphere32k.format(h)} \
                 {sphere10k.format(h)} \
@@ -71,10 +80,6 @@ for r in runs:
         structure = "CORTEX_LEFT" if h == "L" else "CORTEX_RIGHT"
 
         print(f"Hemisphere:", h, "\tRun:", r)
-        # print("\tt points:", len(tseries_z), 
-        #       "\tVertices:", len(tseries_z[0]),
-        #       "\tMean", np.nanmean(np.nanmean(tseries_z, axis=0)), 
-        #       "\tSD", np.nanmean(np.nanstd(tseries_z, axis=0)))
    
         save_gifti(darrays=tseries_z, intents=11, dtypes=16, structure=structure, 
                    filename=tseries10k_gii.format(h, r), encoding=3, endian=2)

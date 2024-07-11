@@ -22,7 +22,6 @@ W[W < np.percentile(W, threshold, axis=0)] = 0
 
 # Load individual timeseries and threshold
 M = nib.load(subject(subj.id).outpath(f"{subj.id}.rfMRI_REST_Atlas_MSMAll.10k_fs_LR.dtseries.nii")).get_fdata().astype("float32")[:, cortex]
-print(np.any(np.isnan(M)))
 M = np.corrcoef(M.T)
 M[M < 0] = 0
 M[M < np.percentile(M, threshold, axis=0)] = 0
@@ -35,7 +34,7 @@ C = cosine_similarity(M.T, W.T)
 W = cosine_similarity(W.T)
 M = cosine_similarity(M.T)
 
-print("Diffusion map embedding:\n")
+print("Diffusion map embedding:")
 print(f"\tFC threshold: {threshold}%")
 print(f"\talpha: {alpha}")
 print(f"\tdiffusion time: {diffusion_time}\n\n")
