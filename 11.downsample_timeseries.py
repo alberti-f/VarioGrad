@@ -22,7 +22,7 @@ sphere32k = data.group_dir + "/S1200.{0}.sphere.32k_fs_LR.surf.gii"
 sphere10k = data.mesh10k_dir + "/S1200.{0}.sphere.10k_fs_LR.surf.gii"
 subj_surf32k = "{0}_midthickness_32k_T1w"
 fc_matrix = data.outpath(f"{data.id}.REST_FC.10k_fs_LR.npy")
-fwhm = 4
+fwhm = 6
 
 print("\n\n\nSubject:", id)
 print("\n\nPredefined Paths:")
