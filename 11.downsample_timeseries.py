@@ -20,7 +20,7 @@ tseries32k = subj.dir + "/MNINonLinear/Results/rfMRI_{0}/rfMRI_{0}_Atlas_MSMAll_
 tseries32k_gii = subj.outpath(f"{id}." + "{0}.rfMRI_{1}_Atlas_MSMAll.32k_fs_LR.func.gii")
 sphere32k = data.group_dir + "/S1200.{0}.sphere.32k_fs_LR.surf.gii"
 sphere10k = data.mesh10k_dir + "/S1200.{0}.sphere.10k_fs_LR.surf.gii"
-subj_surf10k = "{0}_midthickness_10k_T1w"
+subj_surf32k = "{0}_midthickness_32k_T1w"
 fc_matrix = data.outpath(f"{data.id}.REST_FC.10k_fs_LR.npy")
 fwhm = 4
 
@@ -49,7 +49,7 @@ for r in runs:
     
 
     for h in ["L", "R"]:
-        smooth = f"wb_command -metric-smoothing {getattr(subj, subj_surf10k.format(h))} \
+        smooth = f"wb_command -metric-smoothing {getattr(subj, subj_surf32k.format(h))} \
             {tseries32k_gii.format(h, r)} \
                 {fwhm} \
                     {tseries32k_gii.format(h, r)} \
