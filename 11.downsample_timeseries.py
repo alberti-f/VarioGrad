@@ -49,7 +49,7 @@ for r in runs:
     
 
     for h in ["L", "R"]:
-        smooth = f"wb_command -metric-smoothing {subj_surf10k.format(h)} \
+        smooth = f"wb_command -metric-smoothing {getattr(subj, subj_surf10k.format(h))} \
             {tseries32k_gii.format(h, r)} \
                 {fwhm} \
                     {tseries32k_gii.format(h, r)} \
