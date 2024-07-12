@@ -292,7 +292,7 @@ def embed_matrix(M, n_components=2, method="svd", method_kws=None):
 
 
 def joint_embedding(M, R, C=None, n_components=2, method="svd", kernel=None, similarity=None, scale=50, space=None,
-                    laplacian="normalized", overwrite=False, method_kws=None, return_ref=False, rotate=True, normalize=True):
+                    laplacian="normalized", overwrite=False, method_kws=None, return_ref=False, rotate=True, normalized=True):
     '''
     Compute the joint embedding of two matrices M and R
     
@@ -379,7 +379,7 @@ def joint_embedding(M, R, C=None, n_components=2, method="svd", kernel=None, sim
     A, B = A[:, offset:], B[:, offset:]
 
     # Normalize the embeddings
-    if normalize:
+    if normalized:
         B = normalize(B[:, offset:], axis=1)
         A = normalize(A[:, offset:], axis=1)
 
