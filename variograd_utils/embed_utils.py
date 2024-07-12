@@ -177,7 +177,7 @@ def reference_laplacian(R, kernel=None, similarity=None, scale=50, laplacian="no
 
 
 
-def diffusion_map(W, n_components=2, alpha=0.5, diffusion_time=0, random_state=0):
+def diffusion_map(W, n_components=2, alpha=0.5, diffusion_time=0):
     """
     Performs diffusion map embedding on the input matrix W.
 
@@ -271,7 +271,6 @@ def embed_matrix(M, n_components=2, method="svd", method_kws=None):
             method_kws = {}
         if "random_state" in method_kws.keys():
             print("'random_state' set to 0 for reproducibility")
-        method_kws["random_state"] = 0
         method_kws["n_components"] = n_components
 
         embedding, vectors, _ = diffusion_map(M, **method_kws)
