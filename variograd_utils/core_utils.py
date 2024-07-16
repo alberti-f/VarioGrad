@@ -356,4 +356,41 @@ def npz_update(filename, items={}):
     else:
         np.savez(filename, **items)
 
+
+
+def bins_ol(xmin, xmax, nbins=10, overlap=0.25):
+    """
+    Define equally spaced, overlapping bins.
+    
+    Parameters
+    ----------
+    xmin, xmax: float or scalar
+        the extremes of the span of values to bin
+    nbins : scalar
+        number of bins to divide the values in
+    overlap : float
+        the fraction of overlap between bins. Must be between 0 and 0.5 (Default=0.25)
+    
+    Returns:
+    --------
+    lower:
+        the lower bound of every bin
+    upper:
+        the upper bound ov every bin
+
+    """
+    if overlap > 0.5 or overlap < 0:
+        raise ValueError("'overlap' should be between 0 and 0.5")
+
+    ratio = nbins * (1 - 2 * overlap) + (nbins + 1) * overlap
+
+
+    span = xmax - xmin
+    window = span / ratio
+    step = window * (1 - overlap)
+
+    lower = np.arange(xmin, xmax, step)[:nbins]
+    upper = lower + window
+    
+    return lower, upper
         
