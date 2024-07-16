@@ -5,6 +5,7 @@ import numpy as np
 import os.path as os
 from sklearn.utils import Bunch
 from variograd_utils import *
+from itertools import combinations
 
 def create_bunch_from(A):
     if isinstance(A, str):
@@ -31,10 +32,11 @@ class dataset:
         self.output_dir = directories["output_dir"]
         self.utils_dir = directories["work_dir"] + "/variograd_utils"
         self.mesh10k_dir = directories["mesh10k_dir"]
-
+        
         self.subj_list = np.loadtxt(directories["subj_list"]).astype("int32")
         self.N = len(self.subj_list)
         self.id = f"{self.N}avg"
+        self.pairs = list(combinations(self.subj_list, 2))
 
         surf_args = np.array(np.meshgrid(["L", "R"], [10, 32], ["midthickness", "cortex_midthickness"]), 
                              dtype="object").T.reshape(-1, 3)
@@ -354,4 +356,41 @@ def npz_update(filename, items={}):
     else:
         np.savez(filename, **items)
 
+
+
+def bins_ol(xmin, xmax, nbins=10, overlap=0.25):
+    """
+    Define equally spaced, overlapping bins.
+    
+    Parameters
+    ----------
+    xmin, xmax: float or scalar
+        the extremes of the span of values to bin
+    nbins : scalar
+        number of bins to divide the values in
+    overlap : float
+        the fraction of overlap between bins. Must be between 0 and 0.5 (Default=0.25)
+    
+    Returns:
+    --------
+    lower:
+        the lower bound of every bin
+    upper:
+        the upper bound ov every bin
+
+    """
+    if overlap > 0.5 or overlap < 0:
+        raise ValueError("'overlap' should be between 0 and 0.5")
+
+    ratio = nbins * (1 - 2 * overlap) + (nbins + 1) * overlap
+
+
+    span = xmax - xmin
+    window = span / ratio
+    step = window * (1 - overlap)
+
+    lower = np.arange(xmin, xmax, step)[:nbins]
+    upper = lower + window
+    
+    return lower, upper
         
