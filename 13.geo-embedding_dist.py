@@ -34,7 +34,7 @@ hemi = offset + vertex_info_10k[f"gray{h.lower()}"]
 gradients = np.vstack([np.load(subject(id).outpath(f"{id}.REST_FC_embedding.npy"))[hemi, grd] for id in data.subj_list], dtype="float32").T
 fun_dists = np.empty(geo_dists.shape)
 for v, vertex in enumerate(gradients):
-    fun_dists[v] = abs(np.subtract(vertex[row], vertex[col]), dtype="float32")
+    fun_dists[v] = abs(np.subtract(vertex[row], vertex[col], dtype="float32"))
 print("memory used:", process.memory_info().rss / 1e9)
 
 
