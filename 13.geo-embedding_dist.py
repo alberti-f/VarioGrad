@@ -6,7 +6,7 @@ import psutil
 
 process = psutil.Process()
 
-algorithm = "JE_m1500_Cauchy_s50"
+algorithm = "JE_cauchy50"
 h = "L"
 
 dim = 0
