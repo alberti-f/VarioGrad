@@ -11,9 +11,9 @@ h = "L"
 
 dim = 0
 grd = 0
-nbins = 100
+nbins = 200
 overlap = 0.25
-trim = 1000
+trim = 500
 
 data =  dataset()
 
@@ -48,7 +48,7 @@ for i, (lo, up) in enumerate(bins):
     if mask.sum(axis=1).min() < 1000:
         trim_idx = i-1
         break
-    print(f"{i}\t[{lo:.5f}, {up:.5f})\tmin pairs={mask.sum(axis=1).min()}")
+    print(f"{i}\t[{lo:.5f}, {up:.5f})\tmin pairs={mask.sum(axis=1).min()}\tmax pairs={mask.sum(axis=1).max()} \tmean % pairs={mask.mean(axis=1).mean()}")
     bin_masks[i] = mask
 print(f"{trim_idx + 1 } bins included")
 print("memory used:", process.memory_info().rss / 1e9)
