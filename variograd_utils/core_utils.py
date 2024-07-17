@@ -289,12 +289,15 @@ def diagmat_triu_idx(M, n, k=0):
     elif isinstance(M, (int, np.int32)):
         m = M
 
+    m = np.int32(m); n = np.int32(n); k = np.int32(k)
     r=m//n
-    indices = np.tile(np.triu_indices(n, k), [1,r])
-    indices = indices + np.repeat(range(r), len(indices.T)/r) * n
+    
+    # indices = np.tile(np.int32(np.triu_indices(n, k)), [1,r])
+    # indices = indices + np.repeat(np.arange(r, dtype="int32"), len(indices.T)/r) * n
+    indices = np.hstack([np.int32(np.triu_indices(n, k)) + offset for offset in np.arange(0, m, n, dtype="int32")])
 
     if isinstance(M, np.ndarray):
-        diag_triu = np.zeros(M.shape)
+        diag_triu = np.zeros(M.shape, dtype=M.dtype)
         diag_triu[indices[0], indices[1]] = M[indices[0], indices[1]]
         return diag_triu
     
