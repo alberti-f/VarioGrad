@@ -1,43 +1,60 @@
-# inter-subject distance of vertex weight on latent dimensions
+# LEr = data.load_embeddings("L", algorithm)
 
 import numpy as np
 from variograd_utils import *
-from joblib import Parallel, delayed
-import sys
+import psutil
 
-algorithm = "JE_cauchy100"
+process = psutil.Process()
+
+algorithm = "JE_m1500_Cauchy_s50"
+h = "L"
+
+dim = 0
+grd = 0
+nbins = 50
+overlap = 0.25
+trim = 1000
 
 data =  dataset()
-LEl = data.load_embeddings("L", algorithm)
-print(f"Loaded left embeddings: {LEl.keys()}")
 
-LEr = data.load_embeddings("R", algorithm)
-print(f"Loaded right embeddings: {LEr.keys()}")
+row, col = np.triu_indices(500, k=1)
 
-n_subj = data.N
-n_comps = LEl[list(LEl.keys())[0]].shape[2]
+# Calculate embedded geometric distances
+print(f"\nCalculating distances in embedded space")
+LE =  data.load_embeddings(h, algorithm)[algorithm][:, :, dim].T
+geo_dists = np.empty([LE.shape[0], row.size])
+for v, vertex in enumerate(LE):
+    geo_dists[v] = abs(np.subtract(vertex[row], vertex[col], dtype="float32"))
+print("memory used:", process.memory_info().rss / 1e9)
+
+# Calculate functional distances
+print(f"\nCalculating distances in functional space")
+offset = 0 if h == "L" else vertex_info_10k.grayl.size
+hemi = offset + vertex_info_10k[f"gray{h.lower()}"]
+gradients = np.vstack([np.load(subject(id).outpath(f"{id}.REST_FC_embedding.npy"))[hemi, grd] for id in data.subj_list], dtype="float32").T
+fun_dists = np.empty(geo_dists.shape)
+for v, vertex in enumerate(gradients):
+    fun_dists[v] = abs(np.subtract(vertex[row], vertex[col]), dtype="float32")
+print("memory used:", process.memory_info().rss / 1e9)
 
 
-# indices of triu of the subject-component pairs to compare for a given vertex
-row, col = diagmat_triu_idx(n_subj*n_comps, n_subj, 1)
+# Define distance bins
+print(f"\nFiltering distance bins by minimum number of pairs per vertex.")
+print(f"N bins: {nbins}, overlap: {overlap*100}%, min pairs: {trim}")    
+bins = np.array(bins_ol(geo_dists.min(), geo_dists.max(), nbins=50, overlap=0.25)).T
+bin_masks = {}
+for i, (lo, up) in enumerate(bins):
+    mask = np.logical_and(geo_dists >= lo, geo_dists < up)
+    if mask.sum(axis=1).min() < 1000:
+        trim_idx = i-1
+        break
+    print(f"{i}\t[{lo:.5f}, {up:.5f})\tmin pairs={mask.sum(axis=1).min()}")
+    bin_masks[i] = mask
+print(f"{trim_idx + 1 } bins included")
+print("memory used:", process.memory_info().rss / 1e9)
 
 
-print ("Calculating left distances:")
-n_vtx = vertex_info_10k.grayl.size
-for k, LE in LEl.items():
-    LE = np.transpose(LE, (1,2,0))
-    dists = Parallel(n_jobs=-1)(delayed(np.subtract)(v_mat.flatten()[row], v_mat.flatten()[col]) for v_mat in LE)
-    LE_dists_l = abs(np.array(dists)).reshape(n_vtx, n_comps, -1).transpose((1,0,2))
-    np.save(data.outpath(f"All.L.embedded_dist.{k}.npy"), LE_dists_l)
-
-    print(f"\t{k} done")
-
-n_vtx = vertex_info_10k.grayr.size
-for k, LE in LEr.items():
-    LE = np.transpose(LE, (1,2,0))
-    dists = Parallel(n_jobs=-1)(delayed(np.subtract)(v_mat.flatten()[row], v_mat.flatten()[col]) for v_mat in LE)
-    LE_dists_r = abs(np.array(dists)).reshape(n_vtx, n_comps, -1).transpose((1,0,2))
-    np.save(data.outpath(f"All.R.embedded_dist.{k}.npy"), LE_dists_r)
-
-    print(f"\t{k} done")
-
+# for bin, mask in bin_masks.items():
+#     print(f"Bin {bin}")
+#     fun = fun_dists[mask].mean(axis=1)
+#     print(f"Correlation: {np.corrcoef(geo, fun)[0,1]}")
