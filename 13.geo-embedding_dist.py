@@ -41,7 +41,7 @@ print("memory used:", process.memory_info().rss / 1e9)
 # Define distance bins
 print(f"\nFiltering distance bins by minimum number of pairs per vertex.")
 print(f"N bins: {nbins}, overlap: {overlap*100}%, min pairs: {trim}")    
-bins = np.array(bins_ol(geo_dists.min(), geo_dists.max(), nbins=50, overlap=0.25)).T
+bins = np.array(bins_ol(geo_dists.min(), geo_dists.max(), nbins=nbins, overlap=overlap)).T
 bin_masks = {}
 for i, (lo, up) in enumerate(bins):
     mask = np.logical_and(geo_dists >= lo, geo_dists < up)
