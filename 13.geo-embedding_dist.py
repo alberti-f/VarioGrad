@@ -11,7 +11,7 @@ h = "L"
 
 dim = 0
 grd = 0
-nbins = 50
+nbins = 100
 overlap = 0.25
 trim = 1000
 
