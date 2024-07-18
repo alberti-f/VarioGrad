@@ -6,11 +6,8 @@ import psutil
 import sys
 
 algorithm = str(sys.argv[1])
-dim = int(sys.argv[2])
+dim = int(sys.argv[2])-1
 grd = int(sys.argv[3])
-
-
-algorithm = "JE_cauchy50"
 
 process = psutil.Process()
 
