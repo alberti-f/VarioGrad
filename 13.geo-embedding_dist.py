@@ -64,4 +64,4 @@ for bin, mask in bin_masks.items():
     print(f"Bin {bin+1}\t\u03B3(h) = {variograd[:, bin].mean():.2f}({variograd[:, bin].std():.2f})")
 print("memory used:", process.memory_info().rss / 1e9)
 
-np.save(data.outpath(f"VarioGrad.{algorithm}.JE{dim}.G{grd}.npy"), variograd)
+np.save(data.outpath(f"variogram.{h}.{algorithm}.JE{dim}_G{grd}.npy"), variograd)
