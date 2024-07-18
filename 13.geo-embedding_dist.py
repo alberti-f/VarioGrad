@@ -3,14 +3,19 @@
 import numpy as np
 from variograd_utils import *
 import psutil
+import sys
+
+algorithm = str(sys.argv[1])
+dim = int(sys.argv[2])
+grd = int(sys.argv[3])
+
 
 algorithm = "JE_cauchy50"
 
 process = psutil.Process()
 
 for h in ["L", "R"]:
-    dim = 0
-    grd = 0
+
     nbins = 200
     overlap = 0.25
     trim = 500
