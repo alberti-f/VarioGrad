@@ -141,25 +141,39 @@ vertex_info_10k = Bunch(**args)
 del vertex_info_filename
 
 
+def cortex_data_10k(arr, fill=0, vertex_info=vertex_info_10k):
+
+    if arr.ndim==1:
+        arr = arr.reshape([1, -1])
+
+    out = np.zeros([arr.shape[0], vertex_info.num_meshl + vertex_info.num_meshr])
+    out[:, :] = fill
+    graylr = np.hstack([vertex_info.grayl, vertex_info.grayr + vertex_info.num_meshl])
+    out[:, graylr] = arr
+
+    return out.squeeze()
+
 def left_cortex_data_10k(arr, fill=0, vertex_info=vertex_info_10k):
 
-    out = np.zeros(vertex_info.num_meshl)
-    out[:] = fill
-    out[vertex_info.grayl] = arr[:len(vertex_info.grayl)]
-    return out
+    if arr.ndim==1:
+        arr = arr.reshape([1, -1])
+
+    out = np.zeros([arr.shape[0], vertex_info.num_meshl])
+    out[:, :] = fill
+    out[:, vertex_info.grayl] = arr[:, :len(vertex_info.grayl)]
+    return out.squeeze()
 
 def right_cortex_data_10k(arr, fill=0, vertex_info=vertex_info_10k):
-    """
-    Takes a 1D array of fMRI grayordinates and returns the values on the vertices of the right cortex mesh which is neccessary for surface visualization. 
-    The unused vertices are filled with a constant (zero by default). 
-    """
-    out = np.zeros(vertex_info.num_meshr)
-    out[:] = fill
-    if len(arr) == len(vertex_info.grayr):
-        # means arr is already just the right cortex
-        out[vertex_info.grayr] = arr
+
+    if arr.ndim==1:
+        arr = arr.reshape([1, -1])
+
+    out = np.zeros([arr.shape[0], vertex_info.num_meshr])
+    out[:, :] = fill
+    if arr.shape[1] == len(vertex_info.grayr):
+        out[:, vertex_info.grayr] = arr
     else:
-        out[vertex_info.grayr] = arr[len(vertex_info.grayl):len(vertex_info.grayl) + len(vertex_info.grayr)]
+        out[:, vertex_info.grayr] = arr[:, vertex_info.grayl.size : vertex_info.grayl.size + vertex_info.grayr.size]
     return out
 
 # def fun(x, y=default):
