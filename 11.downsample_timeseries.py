@@ -13,7 +13,7 @@ subj = subject(id)
 
 
 # set formattable paths
-runs = ["REST1_LR", "REST2_RL"]
+runs = ["REST1_LR", "REST2_LR"]
 tseries10k = subj.outpath(f"{id}.rfMRI_REST_Atlas_MSMAll.10k_fs_LR.dtseries.nii")
 tseries10k_gii = subj.outpath(f"{id}." + "{0}.rfMRI_{1}_Atlas_MSMAll.10k_fs_LR.func.gii")
 tseries32k = subj.dir + "/MNINonLinear/Results/rfMRI_{0}/rfMRI_{0}_Atlas_MSMAll_hp2000_clean.dtseries.nii" # 
