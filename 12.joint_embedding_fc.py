@@ -11,7 +11,7 @@ subj = subject(id)
 cortex = np.hstack([vertex_info_10k.grayl, vertex_info_10k.grayr + vertex_info_10k.num_meshl])
 threshold = 95
 alpha = 0.5
-diffusion_time = 0
+diffusion_time = 1
 
 print(f"Processing subject {id}")
 
