@@ -2,6 +2,13 @@
 
 import matplotlib.colors
 
+
+
+def Plot_to_numpy(plot):
+    plot = plot.render()
+    plot._check_offscreen()
+    return plot.to_numpy()
+
 pearl1 = matplotlib.colors.LinearSegmentedColormap.from_list("", [(.361, .408, .596), # purple
                                                                 (.920, .835, .980),  # lilac
                                                                 (1, 1, .98),        # white
