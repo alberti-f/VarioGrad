@@ -174,7 +174,7 @@ def right_cortex_data_10k(arr, fill=0, vertex_info=vertex_info_10k):
         out[:, vertex_info.grayr] = arr
     else:
         out[:, vertex_info.grayr] = arr[:, vertex_info.grayl.size : vertex_info.grayl.size + vertex_info.grayr.size]
-    return out
+    return out.squeeze()
 
 # def fun(x, y=default):
 #     """
