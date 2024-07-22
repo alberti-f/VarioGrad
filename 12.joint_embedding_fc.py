@@ -11,7 +11,7 @@ subj = subject(id)
 cortex = np.hstack([vertex_info_10k.grayl, vertex_info_10k.grayr + vertex_info_10k.num_meshl])
 threshold = 95
 alpha = 0.5
-diffusion_time = 0
+diffusion_time = 1
 
 print(f"Processing subject {id}")
 
@@ -43,7 +43,7 @@ print(f"\tdiffusion time: {diffusion_time}\n\n")
 # Compute joint diffusion map embedding
 kws = {"alpha": alpha, "diffusion_time": diffusion_time}
 embedding = joint_embedding(M, W, C=C, n_components=10, method="diffusion", method_kws=kws, 
-                            rotate=False, normalize=False, overwrite=True)
+                            rotate=False, normalized=False, overwrite=True)
 
 
 # Save embedding
