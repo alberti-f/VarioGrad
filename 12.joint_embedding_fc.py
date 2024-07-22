@@ -43,7 +43,7 @@ print(f"\tdiffusion time: {diffusion_time}\n\n")
 # Compute joint diffusion map embedding
 kws = {"alpha": alpha, "diffusion_time": diffusion_time}
 embedding = joint_embedding(M, W, C=C, n_components=10, method="diffusion", method_kws=kws, 
-                            rotate=False, normalize=False, overwrite=True)
+                            rotate=False, normalized=False, overwrite=True)
 
 
 # Save embedding
