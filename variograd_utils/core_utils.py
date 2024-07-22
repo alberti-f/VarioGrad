@@ -289,15 +289,12 @@ def diagmat_triu_idx(M, n, k=0):
     elif isinstance(M, (int, np.int32)):
         m = M
 
-    m = np.int32(m); n = np.int32(n); k = np.int32(k)
     r=m//n
-    
-    # indices = np.tile(np.int32(np.triu_indices(n, k)), [1,r])
-    # indices = indices + np.repeat(np.arange(r, dtype="int32"), len(indices.T)/r) * n
-    indices = np.hstack([np.int32(np.triu_indices(n, k)) + offset for offset in np.arange(0, m, n, dtype="int32")])
+    indices = np.tile(np.triu_indices(n, k), [1,r])
+    indices = indices + np.repeat(range(r), len(indices.T)/r) * n
 
     if isinstance(M, np.ndarray):
-        diag_triu = np.zeros(M.shape, dtype=M.dtype)
+        diag_triu = np.zeros(M.shape)
         diag_triu[indices[0], indices[1]] = M[indices[0], indices[1]]
         return diag_triu
     
@@ -372,7 +369,8 @@ def bins_ol(xmin, xmax, nbins=10, overlap=0.25):
     nbins : scalar
         number of bins to divide the values in
     overlap : float
-        the fraction of overlap between bins. Must be between 0 and 0.5 (Default=0.25)
+        the fraction of overlap between bins. Must be between -0.5 and 0.5 (Default=0.25)
+        Negative values will result in disjoint bins.
     
     Returns:
     --------
@@ -382,8 +380,8 @@ def bins_ol(xmin, xmax, nbins=10, overlap=0.25):
         the upper bound ov every bin
 
     """
-    if overlap > 0.5 or overlap < 0:
-        raise ValueError("'overlap' should be between 0 and 0.5")
+    if overlap < -0.5 or overlap > 0.5:
+        raise ValueError("'overlap' should be between -0.5 and 0.5")
 
     ratio = nbins * (1 - 2 * overlap) + (nbins + 1) * overlap
 
