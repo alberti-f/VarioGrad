@@ -1,7 +1,7 @@
 import numpy as np
 from variograd_utils import *
 import psutil
-import sys
+import sys, os
 
 algorithm = str(sys.argv[1])
 dim = int(sys.argv[2])-1
@@ -82,5 +82,10 @@ for h in ["L", "R"]:
     print("memory used:", process.memory_info().rss / 1e9)
 
 
+
+    if not os.path.exists(data.outpath(f"/variograms")):
+        os.mkdir(data.outpath(f"/variograms"))
+
+    np.save(data.outpath(f"/variograms/variogram.{h}.{algorithm}.JE{dim}_G{grd}.npy"), variograd)
 
     np.save(data.outpath(f"variogram.{h}.{algorithm}.JE{dim}_G{grd}.npy"), variograd)
