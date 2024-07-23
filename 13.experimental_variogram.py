@@ -71,8 +71,8 @@ for h in ["L", "R"]:
     variograd = np.empty([fun_dists.shape[0], len(bin_masks.keys())])
     for bin, mask in bin_masks.items():
         s = 0.25 * (bins[bin, 1] - bins[bin, 0])
-        W = np.abs(geo_dists - h[bin])
-        W = kernelize(W, kernel="gauss", scale=s) * mask
+        W = np.float32(np.abs(geo_dists - h[bin]))
+        W = np.exp(-0.5 * (W ** 2) / (s ** 2)) * mask
         W = W / W.sum(axis=1, keepdims=True)
 
         variograd[:, bin] =  0.5 * np.sum(np.square(fun_dists ) * W , axis=1)
