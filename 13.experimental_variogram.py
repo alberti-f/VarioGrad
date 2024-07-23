@@ -59,7 +59,7 @@ for h in ["L", "R"]:
         print(f"{i+1}\t[{lo:.5f}, {up:.5f}]\tmin pairs={mask.sum(axis=1).min()}\
             max pairs={mask.sum(axis=1).max()} \tmean % pairs={mask.mean(axis=1).mean() * 100:.0f}")
         bin_masks[i] = mask
-    
+    h = np.mean([bins[i] for i in bin_masks.keys()], axis=1, dtype="float32")
     print(f"{len(bin_masks.keys())} bins included")
     print("memory used:", process.memory_info().rss / 1e9)
 
@@ -71,6 +71,7 @@ for h in ["L", "R"]:
     variograd = np.empty([fun_dists.shape[0], len(bin_masks.keys())])
     for bin, mask in bin_masks.items():
         s = np.float32(0.25 * (bins[bin, 1] - bins[bin, 0]))
+        print(type(s), type(geo_dists[0,0]))
         W = np.subtract(geo_dists, h[bin], dtype="float32")
         W = np.exp(-0.5 * (W ** 2) / (s ** 2)) * mask
         W = W / W.sum(axis=1, keepdims=True)
