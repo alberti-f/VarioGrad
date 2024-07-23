@@ -70,8 +70,8 @@ for h in ["L", "R"]:
 
     variograd = np.empty([fun_dists.shape[0], len(bin_masks.keys())])
     for bin, mask in bin_masks.items():
-        s = 0.25 * (bins[bin, 1] - bins[bin, 0])
-        W = np.float32(np.abs(geo_dists - h[bin]))
+        s = np.float32(0.25 * (bins[bin, 1] - bins[bin, 0]))
+        W = np.subtract(geo_dists, h[bin], dtype="float32")
         W = np.exp(-0.5 * (W ** 2) / (s ** 2)) * mask
         W = W / W.sum(axis=1, keepdims=True)
 
