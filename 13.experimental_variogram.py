@@ -9,7 +9,7 @@ grd = int(sys.argv[3])-1
 
 process = psutil.Process()
 
-nbins = 100
+nbins = 200
 overlap = 0.25
 min_pairs = 30
 
