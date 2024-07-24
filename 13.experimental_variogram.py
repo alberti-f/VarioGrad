@@ -9,23 +9,24 @@ grd = int(sys.argv[3])-1
 
 process = psutil.Process()
 
+nbins = 100
+overlap = 0.25
+min_pairs = 30
+
+data =  dataset()
+
+row, col = np.triu_indices(data.N, k=1)
+
 for h in ["L", "R"]:
-
-    nbins = 200
-    overlap = 0.25
-    min_pairs = 30
-
-    data =  dataset()
-
-    row, col = np.triu_indices(data.N, k=1)
-
 
     # Calculate embedded geometric distances
     print(f"\nCalculating distances in embedded space")
+
     LE =  data.load_embeddings(h, algorithm)[algorithm][:, :, dim].T
     geo_dists = np.empty([LE.shape[0], row.size])
     for v, vertex in enumerate(LE):
         geo_dists[v] = abs(np.subtract(vertex[row], vertex[col], dtype="float32"))
+
     print("memory used:", process.memory_info().rss / 1e9)
 
 
@@ -52,33 +53,35 @@ for h in ["L", "R"]:
 
     bins = np.array(bins_ol(0, geo_dists.max(), nbins=nbins, overlap=overlap)).T
     bin_masks = {}
+    lags = []
     for i, (lo, up) in enumerate(bins):
         mask = np.logical_and(geo_dists >= lo, geo_dists <= up)
         if mask.sum(axis=1).min() < min_pairs:
             break
-        print(f"{i+1}\t[{lo:.5f}, {up:.5f}]\tmin pairs={mask.sum(axis=1).min()}\
-            max pairs={mask.sum(axis=1).max()} \tmean % pairs={mask.mean(axis=1).mean() * 100:.0f}")
+        lags.append((lo + up) / 2)
         bin_masks[i] = mask
-    h = np.mean([bins[i] for i in bin_masks.keys()], axis=1, dtype="float32")
-    print(f"{len(bin_masks.keys())} bins included")
+        print(f"{i+1}\th={lags[i]:.1E}\tbin=[{lo:.3f}, {up:.3f}]\tmin pairs={mask.sum(axis=1).min()}\tmax pairs={mask.sum(axis=1).max()} \tmean % pairs={mask.mean(axis=1).mean() * 100:.0f}")
+    lags = np.array(lags)
+
+    print(f"Bins used: {len(bin_masks.keys())}")
+    print(f"Included pairs: {int(np.any([m for m in bin_masks.values()], axis=0).mean() * 100)}%")
     print("memory used:", process.memory_info().rss / 1e9)
 
 
 
-    # Calculate variograms 
+    # Calculate experimental variograms 
     print("\nCalculating vertex-wise variograms")
 
     variograd = np.empty([fun_dists.shape[0], len(bin_masks.keys())])
     for bin, mask in bin_masks.items():
-        s = np.float32(0.25 * (bins[bin, 1] - bins[bin, 0]))
-        print(type(s), type(geo_dists[0,0]))
-        W = np.subtract(geo_dists, h[bin], dtype="float32")
+        s = 0.25 * (bins[bin, 1] - bins[bin, 0])
+        W = np.subtract(geo_dists, lags[bin], dtype="float32")
         W = np.exp(-0.5 * (W ** 2) / (s ** 2)) * mask
         W = W / W.sum(axis=1, keepdims=True)
 
-        variograd[:, bin] =  0.5 * np.sum(np.square(fun_dists ) * W , axis=1)
+        variograd[:, bin] =  0.5 * np.sum(np.square(fun_dists) * W , axis=1)
 
-        print(f"Bin {bin+1}\t\u03B3(h) = {variograd[:, bin].mean():.2f}({variograd[:, bin].std():.2f})")
+        print(f"Lag {bin+1}\t\u03B3(h) = {variograd[:, bin].mean():.2f}({variograd[:, bin].std():.2f})")
 
     print("memory used:", process.memory_info().rss / 1e9)
 
@@ -87,6 +90,4 @@ for h in ["L", "R"]:
     if not os.path.exists(data.outpath(f"/variograms")):
         os.mkdir(data.outpath(f"/variograms"))
 
-    np.save(data.outpath(f"/variograms/variogram.{h}.{algorithm}.JE{dim}_G{grd}.npy"), variograd)
-
-    np.save(data.outpath(f"variogram.{h}.{algorithm}.JE{dim}_G{grd}.npy"), variograd)
+    np.save(data.outpath(f"variograms/variogram.{h}.{algorithm}.ax{dim}_G{grd}.npy"), variograd)
