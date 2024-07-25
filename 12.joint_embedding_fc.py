@@ -3,7 +3,7 @@ import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 import nibabel as nib
 import sys
-from scipy import procustes
+
 
 idx = int(sys.argv[1])-1
 data = dataset()
