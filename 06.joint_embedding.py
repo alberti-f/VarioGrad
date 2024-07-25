@@ -35,7 +35,7 @@ for h in hemi:
         print(f"\n\nParameter combinaiton {n+1}/{len(params)}\tkey:", key, "\n",)
         process = psutil.Process()
 
-        all_embeddings[key] = joint_embedding(M, R, C=C, n_components=n_components, kernel=k, scale=s)
+        all_embeddings[key] = joint_embedding(M, R, C=C, n_components=n_components, kernel=k, scale=s, alignment="rotation")
 
         print(f"\n\tMemory used: {process.memory_info().rss / (1024 ** 3):.2f} GB\n")
         del process
