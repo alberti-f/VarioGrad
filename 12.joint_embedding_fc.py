@@ -3,6 +3,7 @@ import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 import nibabel as nib
 import sys
+from scipy import procustes
 
 idx = int(sys.argv[1])-1
 data = dataset()
@@ -43,7 +44,8 @@ print(f"\tdiffusion time: {diffusion_time}\n\n")
 # Compute joint diffusion map embedding
 kws = {"alpha": alpha, "diffusion_time": diffusion_time}
 embedding = joint_embedding(M, W, C=C, n_components=10, method="diffusion", method_kws=kws, 
-                            rotate=False, normalized=False, overwrite=True)
+                            alignment="procrustes", normalized=False, overwrite=True)
+
 
 
 # Save embedding
