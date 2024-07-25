@@ -6,7 +6,8 @@ from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.decomposition import TruncatedSVD
 from sklearn.preprocessing import normalize
 from scipy.sparse import diags, linalg
-from mapalign.embed import DiffusionMapEmbedding
+from scipy.linalg import orthogonal_procrustes
+
 
 def kernelize(A, kernel="linear", scale=50):
     '''
@@ -291,7 +292,7 @@ def embed_matrix(M, n_components=2, method="svd", method_kws=None):
 
 
 def joint_embedding(M, R, C=None, n_components=2, method="svd", kernel=None, similarity=None, scale=50, space=None,
-                    laplacian="normalized", overwrite=False, method_kws=None, return_ref=False, rotate=True, normalized=True):
+                    laplacian="normalized", overwrite=False, method_kws=None, return_ref=False, alignment=None, normalized=True):
     '''
     Compute the joint embedding of two matrices M and R
     
@@ -363,22 +364,34 @@ def joint_embedding(M, R, C=None, n_components=2, method="svd", kernel=None, sim
     components = embed_matrix(L, n_components=n_components, method=method, method_kws=method_kws)
     A, B = components[:N, :], components[N:, :]
 
+    print("A", type(A[0,0]), "B", type(B[0,0]), "L", type(L[0,0]), "M", type(M[0,0]), "R", type(R[0,0]), "C", type(C[0,0]))
 
     # Rotate the joint embedding
-    if rotate:
+    if alignment is not None:
         L = R if method=="diffusion" else reference_laplacian(R, kernel=kernel, similarity=similarity, scale=scale, laplacian=laplacian)
         ref = embed_matrix(L, n_components=n_components, method=method, method_kws=method_kws)
-        ref_norm = normalize(ref, axis=1)
-        A_norm = normalize(A, axis=1)
+        ref = normalize(ref, axis=1)
+        A = normalize(A, axis=1)
+        B = normalize(B, axis=1)
 
-        rotation_mat = np.dot(A_norm.T, ref_norm)
-        B = np.dot(B, rotation_mat)
+        if alignment == "rotation":            
+            rotation_mat = np.dot(A.T, ref)
+            A = np.dot(A, rotation_mat)
+            B = np.dot(B, rotation_mat)
+
+        elif alignment == "procrustes":
+            rotation_mat, s = orthogonal_procrustes(A, ref, check_finite=False)
+            A = np.dot(A, rotation_mat.T) * s
+            B = np.dot(B, rotation_mat.T) * s
+        
+        print("A_norm", type(A[0,0]), "ref_norm", type(ref[0,0]), "L", type(L[0,0]), "rotation_mat", type(rotation_mat[0,0]), "B", type(B[0,0]))
+        
 
     offset =  1 if method=="svd" else 0
     A, B = A[:, offset:], B[:, offset:]
 
     # Normalize the embeddings
-    if normalized:
+    if normalized and alignment is None:
         B = normalize(B[:, offset:], axis=1)
         A = normalize(A[:, offset:], axis=1)
 
