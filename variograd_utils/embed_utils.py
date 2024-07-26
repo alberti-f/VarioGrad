@@ -178,7 +178,7 @@ def reference_laplacian(R, kernel=None, similarity=None, scale=50, laplacian="no
 
 
 
-def diffusion_map(W, n_components=2, alpha=0.5, diffusion_time=0):
+def diffusion_map(W, n_components=2, alpha=0.5, diffusion_time=0, random_state=None):
     """
     Performs diffusion map embedding on the input matrix W.
 
@@ -193,6 +193,7 @@ def diffusion_map(W, n_components=2, alpha=0.5, diffusion_time=0):
     Returns:
     -------
         embedding (np.ndarray): Diffusion map embedding.
+        vectors (np.ndarray): Eigenvectors of the diffusion map.
         lambdas (np.ndarray): Eigenvalues of the diffusion map.
     """
 
@@ -210,11 +211,14 @@ def diffusion_map(W, n_components=2, alpha=0.5, diffusion_time=0):
     M = d_alpha @ L_alpha
     
     # Compute the eigendecomposition of the random walk Laplacian
-    lambdas, vectors = linalg.eigsh(M, k=n_components + 1)
-    sorted_indices = np.argsort(-np.real(lambdas))
-    vectors = vectors[:, sorted_indices]
-    lambdas = np.real(lambdas[sorted_indices])
+    # lambdas, vectors = linalg.eigsh(M, k=n_components + 1)
+    # sorted_indices = np.argsort(-np.real(lambdas))
+    # vectors = vectors[:, sorted_indices]
+    # lambdas = np.real(lambdas[sorted_indices])
 
+    embedding = TruncatedSVD(n_components=n_components+1, random_state=random_state).fit(M) 
+    vectors = embedding.components_.T
+    lambdas = embedding.singular_values_
     
 
     # Compute the diffusion map embedding
@@ -272,6 +276,7 @@ def embed_matrix(M, n_components=2, method="svd", method_kws=None):
             method_kws = {}
         if "random_state" in method_kws.keys():
             print("'random_state' set to 0 for reproducibility")
+        method_kws["random_state"] = 0
         method_kws["n_components"] = n_components
 
         embedding, vectors, _ = diffusion_map(M, **method_kws)
@@ -352,7 +357,7 @@ def joint_embedding(M, R, C=None, n_components=2, method="svd", kernel=None, sim
 
     # Compute the joint Laplacian matrix
     if method=="svd":
-        L = joint_laplacian(M, R.copy(), C, kernel=kernel, similarity=similarity, 
+        L = joint_laplacian(M, R, C, kernel=kernel, similarity=similarity, 
                             scale=scale, space=space, laplacian=laplacian)
         n_components += 1
     elif method=="diffusion":
@@ -364,27 +369,32 @@ def joint_embedding(M, R, C=None, n_components=2, method="svd", kernel=None, sim
     components = embed_matrix(L, n_components=n_components, method=method, method_kws=method_kws)
     A, B = components[:N, :], components[N:, :]
 
-    print("A", type(A[0,0]), "B", type(B[0,0]), "L", type(L[0,0]), "M", type(M[0,0]), "R", type(R[0,0]), "C", type(C[0,0]))
 
     # Rotate the joint embedding
     if alignment is not None:
+        
+        if alignment not in ["rotation", "procrustes"]:
+            raise ValueError("Unknown alignment method")
+
         L = R if method=="diffusion" else reference_laplacian(R, kernel=kernel, similarity=similarity, scale=scale, laplacian=laplacian)
         ref = embed_matrix(L, n_components=n_components, method=method, method_kws=method_kws)
-        ref = normalize(ref, axis=1)
-        A = normalize(A, axis=1)
-        B = normalize(B, axis=1)
+        
+        ref -= ref.mean()
+        A -= A.mean()
+        B -= - B.mean()
 
-        if alignment == "rotation":            
+        print(A[0, :5], B[0, :5], ref[0, :5])
+
+        if alignment == "rotation":  
             rotation_mat = np.dot(A.T, ref)
             A = np.dot(A, rotation_mat)
             B = np.dot(B, rotation_mat)
 
         elif alignment == "procrustes":
+            raise ValueError("Procrustes alignment not implemented")
             rotation_mat, s = orthogonal_procrustes(A, ref, check_finite=False)
             A = np.dot(A, rotation_mat.T) * s
             B = np.dot(B, rotation_mat.T) * s
-        
-        print("A_norm", type(A[0,0]), "ref_norm", type(ref[0,0]), "L", type(L[0,0]), "rotation_mat", type(rotation_mat[0,0]), "B", type(B[0,0]))
         
 
     offset =  1 if method=="svd" else 0
@@ -397,7 +407,7 @@ def joint_embedding(M, R, C=None, n_components=2, method="svd", kernel=None, sim
 
     
     if return_ref:
-        return B, A
+        return B, A, ref, L
     else:
         return B
     
