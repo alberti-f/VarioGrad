@@ -407,7 +407,7 @@ def joint_embedding(M, R, C=None, n_components=2, method="svd", kernel=None, sim
 
     
     if return_ref:
-        return B, A, ref, L
+        return B, A
     else:
         return B
     
