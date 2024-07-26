@@ -9,7 +9,7 @@ grd = int(sys.argv[3])-1
 
 process = psutil.Process()
 
-nbins = 200
+nbins = 100
 overlap = 0.25
 min_pairs = 30
 
@@ -26,6 +26,7 @@ for h in ["L", "R"]:
     geo_dists = np.empty([LE.shape[0], row.size])
     for v, vertex in enumerate(LE):
         geo_dists[v] = abs(np.subtract(vertex[row], vertex[col], dtype="float32"))
+    geo_dists /= geo_dists.max(axis=1, keepdims=True)
 
     print("memory used:", process.memory_info().rss / 1e9)
 
@@ -68,7 +69,7 @@ for h in ["L", "R"]:
     print("\nCalculating vertex-wise variograms")
 
     bins = np.array(bins_ol(0, geo_dists.max(), nbins=nbins, overlap=overlap)).T
-    variograd = np.empty([fun_dists.shape[0], len(bin_masks.keys())])
+    variograd = np.empty([fun_dists.shape[0], bins.shape[0]])
     lags = []
     for bin, (lo, up) in enumerate(bins):
 
