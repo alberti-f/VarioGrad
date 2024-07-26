@@ -51,29 +51,33 @@ for h in ["L", "R"]:
     print(f"\nFiltering distance bins by minimum number of pairs per vertex.")
     print(f"N bins: {nbins}, overlap: {overlap*100}%, min pairs: {min_pairs}\n")
 
-    bins = np.array(bins_ol(0, geo_dists.max(), nbins=nbins, overlap=overlap)).T
-    bin_masks = {}
-    lags = []
-    for i, (lo, up) in enumerate(bins):
-        mask = np.logical_and(geo_dists >= lo, geo_dists <= up)
-        if mask.sum(axis=1).min() < min_pairs:
-            break
-        lags.append((lo + up) / 2)
-        bin_masks[i] = mask
-        print(f"{i+1}\th={lags[i]:.1E}\tbin=[{lo:.3f}, {up:.3f}]\tmin pairs={mask.sum(axis=1).min()}\tmax pairs={mask.sum(axis=1).max()} \tmean % pairs={mask.mean(axis=1).mean() * 100:.0f}")
-    lags = np.array(lags)
-
-    print(f"Bins used: {len(bin_masks.keys())}")
-    print(f"Included pairs: {int(np.any([m for m in bin_masks.values()], axis=0).mean() * 100)}%")
-    print("memory used:", process.memory_info().rss / 1e9)
-
+    # bins = np.array(bins_ol(0, geo_dists.max(), nbins=nbins, overlap=overlap)).T
+    # bin_masks = {}
+    # lags = []
+    # for i, (lo, up) in enumerate(bins):
+    #     mask = np.logical_and(geo_dists >= lo, geo_dists <= up)
+    #     if mask.sum(axis=1).min() < min_pairs:
+    #         break
+    #     lags.append((lo + up) / 2)
+    #     bin_masks[i] = mask
+    #     print(f"{i+1}\th={lags[i]:.1E}\tbin=[{lo:.3f}, {up:.3f}]\tmin pairs={mask.sum(axis=1).min()}\tmax pairs={mask.sum(axis=1).max()} \tmean % pairs={mask.mean(axis=1).mean() * 100:.0f}")
+    # lags = np.array(lags)
 
 
     # Calculate experimental variograms 
     print("\nCalculating vertex-wise variograms")
 
+    bins = np.array(bins_ol(0, geo_dists.max(), nbins=nbins, overlap=overlap)).T
     variograd = np.empty([fun_dists.shape[0], len(bin_masks.keys())])
-    for bin, mask in bin_masks.items():
+    lags = []
+    for bin, (lo, up) in enumerate(bins):
+
+        mask = np.logical_and(geo_dists >= lo, geo_dists <= up)
+        if mask.sum(axis=1).min() < min_pairs:
+            break
+        lags.append((lo + up) / 2)
+        print(f"{bin+1}\th={lags[i]:.1E}\tbin=[{lo:.3f}, {up:.3f}]\tmin pairs={mask.sum(axis=1).min()}\tmax pairs={mask.sum(axis=1).max()} \tmean % pairs={mask.mean(axis=1).mean() * 100:.0f}")
+
         s = 0.25 * (bins[bin, 1] - bins[bin, 0])
         W = np.subtract(geo_dists, lags[bin], dtype="float32")
         W = np.exp(-0.5 * (W ** 2) / (s ** 2)) * mask
@@ -81,7 +85,23 @@ for h in ["L", "R"]:
 
         variograd[:, bin] =  0.5 * np.sum(np.square(fun_dists) * W , axis=1)
 
-        print(f"Lag {bin+1}\t\u03B3(h) = {variograd[:, bin].mean():.2f}({variograd[:, bin].std():.2f})")
+        print(f"\t\u03B3(h) = {variograd[:, bin].mean():.2f}({variograd[:, bin].std():.2f})")
+
+    print(f"Bins used: {bins.shape[0]}")
+    # print(f"Included pairs: {int(np.any([m for m in bin_masks.values()], axis=0).mean() * 100)}%")
+    print("memory used:", process.memory_info().rss / 1e9)
+
+    # variograd = np.empty([fun_dists.shape[0], len(bin_masks.keys())])
+    # for bin, mask in bin_masks.items():
+
+    #     s = 0.25 * (bins[bin, 1] - bins[bin, 0])
+    #     W = np.subtract(geo_dists, lags[bin], dtype="float32")
+    #     W = np.exp(-0.5 * (W ** 2) / (s ** 2)) * mask
+    #     W = W / W.sum(axis=1, keepdims=True)
+
+    #     variograd[:, bin] =  0.5 * np.sum(np.square(fun_dists) * W , axis=1)
+
+    #     print(f"Lag {bin+1}\t\u03B3(h) = {variograd[:, bin].mean():.2f}({variograd[:, bin].std():.2f})")
 
     print("memory used:", process.memory_info().rss / 1e9)
 
