@@ -13,7 +13,7 @@ subj = subject(id)
 
 
 # set formattable paths
-runs = ["REST1_LR", "REST2_RL"]
+runs = ["REST1_LR", "REST2_LR"]
 tseries10k = subj.outpath(f"{id}.rfMRI_REST_Atlas_MSMAll.10k_fs_LR.dtseries.nii")
 tseries10k_gii = subj.outpath(f"{id}." + "{0}.rfMRI_{1}_Atlas_MSMAll.10k_fs_LR.func.gii")
 tseries32k = subj.dir + "/MNINonLinear/Results/rfMRI_{0}/rfMRI_{0}_Atlas_MSMAll_hp2000_clean.dtseries.nii" # 
@@ -22,7 +22,7 @@ sphere32k = data.group_dir + "/S1200.{0}.sphere.32k_fs_LR.surf.gii"
 sphere10k = data.mesh10k_dir + "/S1200.{0}.sphere.10k_fs_LR.surf.gii"
 subj_surf32k = "{0}_midthickness_32k_T1w"
 fc_matrix = data.outpath(f"{data.id}.REST_FC.10k_fs_LR.npy")
-fwhm = 6
+fwhm = 8
 
 print("\n\n\nSubject:", id)
 print("\n\nPredefined Paths:")
