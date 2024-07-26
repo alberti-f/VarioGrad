@@ -61,7 +61,11 @@ for h in ["L", "R"]:
     print("\nCalculating vertex-wise variograms")
     print(f"N bins: {nbins}, overlap: {overlap*100}%, min pairs: {min_pairs}\n")
 
-    bins = np.array(bins_ol(0, geo_dists.max(), nbins=nbins, overlap=overlap)).T
+    ############################################################################################################
+    bins = np.array(bins_ol(0, np.percentile(geo_dists, 90), nbins=nbins, overlap=overlap)).T
+    # bins = np.array(bins_ol(0, geo_dists.max(), nbins=nbins, overlap=overlap)).T
+    ############################################################################################################
+
     variograd = np.empty([fun_dists.shape[0], bins.shape[0]])
     lags = []
     for bin, (lo, up) in enumerate(bins):
