@@ -77,7 +77,7 @@ for h in ["L", "R"]:
         if mask.sum(axis=1).min() < min_pairs:
             break
         lags.append((lo + up) / 2)
-        print(f"{bin+1}\th={lags[i]:.1E}\tbin=[{lo:.3f}, {up:.3f}]\tmin pairs={mask.sum(axis=1).min()}\tmax pairs={mask.sum(axis=1).max()} \tmean % pairs={mask.mean(axis=1).mean() * 100:.0f}")
+        print(f"{bin+1}\th={lags[bin]:.1E}\tbin=[{lo:.3f}, {up:.3f}]\tmin pairs={mask.sum(axis=1).min()}\tmax pairs={mask.sum(axis=1).max()} \tmean % pairs={mask.mean(axis=1).mean() * 100:.0f}")
 
         s = 0.25 * (bins[bin, 1] - bins[bin, 0])
         W = np.subtract(geo_dists, lags[bin], dtype="float32")
