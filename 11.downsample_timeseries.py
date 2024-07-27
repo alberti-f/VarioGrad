@@ -2,7 +2,7 @@ from subprocess import run
 import nibabel as nib
 from scipy.stats import zscore
 from variograd_utils import *
-import os, sys
+import os, sys, time
 
 
 idx = int(sys.argv[1])-1
@@ -114,6 +114,16 @@ os.remove(tseries10k_gii.format('R', 'REST'))
 
 
 if idx == len(data.subj_list)-1:
+
+
+    print("\nWaiting for all subjects to be processed before computing FC matrix")
+    compute_FC = False
+    while not compute_FC:
+        print("\t...")
+        time.sleep(30)
+        run_last = all([os.path.exists(subj.outpath(f"{id}.rfMRI_REST_Atlas_MSMAll.10k_fs_LR.dtseries.nii")) 
+                        for i in data.subj_list[:-1]])
+    time.sleep(30)
     
     n_vertices = vertex_info_10k.num_meshl + vertex_info_10k.num_meshr
     M = np.zeros((n_vertices, n_vertices))
