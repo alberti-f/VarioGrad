@@ -8,8 +8,8 @@ from os.path import exists
 # Parameters used by the script
 overwrite = True
 algorithm = ["JE", "GCCA"]
-radius = [50, 999]
-size = 150
+radius = [50, 100, 150, 200, 999]
+size = 100
 
 print("Computing within subject similarity")
 print("\toverwrite previous data:", overwrite)
