@@ -358,7 +358,7 @@ def npz_update(filename, items={}):
 
 
 
-def bins_ol(xmin, xmax, nbins=10, overlap=0.25):
+def bins_ol(xmin, xmax, nbins=10, overlap=0.25, inclusive=True):
     """
     Define equally spaced, overlapping bins.
     
@@ -371,6 +371,9 @@ def bins_ol(xmin, xmax, nbins=10, overlap=0.25):
     overlap : float
         the fraction of overlap between bins. Must be between -0.5 and 0.5 (Default=0.25)
         Negative values will result in disjoint bins.
+    inclusive : bool
+        if True, the bounds of the bins will be the centers of the outer bins.
+        If False, the bounds will be the edges of the outer bins.
     
     Returns:
     --------
@@ -383,15 +386,24 @@ def bins_ol(xmin, xmax, nbins=10, overlap=0.25):
     if overlap < -0.5 or overlap > 0.5:
         raise ValueError("'overlap' should be between -0.5 and 0.5")
 
-    ratio = nbins * (1 - 2 * overlap) + (nbins + 1) * overlap
-
-
     span = xmax - xmin
-    window = span / ratio
-    step = window * (1 - overlap)
 
-    lower = np.arange(xmin, xmax, step)[:nbins]
-    upper = lower + window
-    
+    if inclusive:
+        step = span / nbins
+        center = np.arange(xmin, xmax + step, step)
+        half_window = step * 0.5  +  step * overlap
+
+        lower = center - half_window
+        upper = center + half_window
+
+    else:
+        ratio = nbins * (1 - 2 * overlap) + (nbins + 1) * overlap
+
+        window = span / ratio
+        step = window * (1 - overlap)
+
+        lower = np.arange(xmin, xmax, step)[:nbins]
+        upper = lower + window
+            
     return lower, upper
         
