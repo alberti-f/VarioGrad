@@ -1,5 +1,20 @@
 # 04 Compute geodesic distance mats
 
+"""
+Create meshes of the cortical surface only (without medial wall)
+
+The script uses the workbench command line tool to compue the geodesic distance
+between vertices on the 10k surface.
+The script is designed to be run as array job receiving the task index as argument.
+The <index> argument is used to select a subject from the subject list file.
+
+Parameters:
+<index>: Integer
+    Index of the subject in the subject list file
+    specified in the directories.txt file
+"""
+
+
 import nibabel as nib
 from subprocess import run
 from variograd_utils import *
