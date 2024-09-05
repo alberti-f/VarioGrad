@@ -13,6 +13,7 @@ output_cluster/
 
 # Ignore temporary notebook files
 .ipynb_checkpoints/
+notebooks/*
 *.ipynb
 
 # Ignore cluster simulator
