@@ -14,7 +14,7 @@ subj = subject(id)
 
 
 # set formattable paths
-runs = ["REST1_LR", "REST2_LR"]
+runs = ["REST1_LR", "REST1_RL", "REST2_LR", "REST2_RL"]
 tseries10k = subj.outpath(f"{id}.rfMRI_REST_Atlas_MSMAll.10k_fs_LR.dtseries.nii")
 tseries10k_gii = subj.outpath(f"{id}." + "{0}.rfMRI_{1}_Atlas_MSMAll.10k_fs_LR.func.gii")
 tseries32k = subj.dir + "/MNINonLinear/Results/rfMRI_{0}/rfMRI_{0}_Atlas_MSMAll_hp2000_clean.dtseries.nii" # 
@@ -121,10 +121,11 @@ if idx == len(data.subj_list)-1:
     while not compute_FC:
         print("\t...")
         time.sleep(30)
-        run_last = all([os.path.exists(subj.outpath(f"{id}.rfMRI_REST_Atlas_MSMAll.10k_fs_LR.dtseries.nii")) 
+        compute_FC = all([os.path.exists(subj.outpath(f"{id}.rfMRI_REST_Atlas_MSMAll.10k_fs_LR.dtseries.nii")) 
                         for i in data.subj_list[:-1]])
     time.sleep(30)
     
+    print("Computing group-average FC matrix")
     n_vertices = vertex_info_10k.num_meshl + vertex_info_10k.num_meshr
     M = np.zeros((n_vertices, n_vertices))
 
@@ -136,6 +137,5 @@ if idx == len(data.subj_list)-1:
     M /= len(data.subj_list)
 
     np.save(fc_matrix, M)
-
 
 
