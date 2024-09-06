@@ -32,7 +32,8 @@ if [ $# == 0 ] ; then
     exit 1;
 fi
 
-dir_file=./variograd_utils/directories.txt
+dir_pkg=$(python -c "import os; import variograd_utils; print(os.path.dirname(variograd_utils.__file__))")
+dir_file=$dir_pkg/directories.txt
 
 # truncate file if existing 
 if [ -f ./variograd_utils/directories.txt ]; then : > $dir_file; fi
