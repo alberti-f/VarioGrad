@@ -32,7 +32,7 @@ class dataset:
         self.group_dir = directories["group_dir"]
         self.subj_dir = directories["subj_dir"]
         self.output_dir = directories["output_dir"]
-        self.utils_dir = directories["work_dir"] + "/variograd_utils"
+        self.utils_dir = f"{pkg_path}"
         self.mesh10k_dir = directories["mesh10k_dir"]
         
         self.subj_list = np.loadtxt(directories["subj_list"]).astype("int32")
