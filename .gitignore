@@ -7,10 +7,6 @@ __pycache__/
 # Ignore temporary files
 *.tmp*
 
-# Ignore output files
-output/
-output_cluster/
-
 # Ignore temporary notebook files
 .ipynb_checkpoints/
 notebooks/*
@@ -20,16 +16,16 @@ notebooks/*
 run_analyses.sh
 
 # Ignore local paths file
-variograd_utils/directories.txt
+*directories.txt
 
 # Ignore subject pairs file
 subject_pairs.txt
-
-# Ignore job scripts
-jobs/
 
 # Ignor logs
 logs*/
 errs*/
 *.out
 *.err
+
+# Ignore package info
+*/*.egg-info/*

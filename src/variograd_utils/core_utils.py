@@ -4,6 +4,7 @@ import nibabel as nib
 import numpy as np
 import os.path as os
 from sklearn.utils import Bunch
+import variograd_utils
 from variograd_utils import *
 from itertools import combinations
 
@@ -25,12 +26,13 @@ def create_bunch_from(A):
 class dataset:
 
     def __init__(self):
-        file = open('./variograd_utils/directories.txt','r')
+        pkg_path = os.dirname(variograd_utils.__file__)
+        file = open(f'{pkg_path}/directories.txt','r')
         directories = {line.split("=")[0]: line.split("=")[1].replace("\n", "") for line in file}
         self.group_dir = directories["group_dir"]
         self.subj_dir = directories["subj_dir"]
         self.output_dir = directories["output_dir"]
-        self.utils_dir = directories["work_dir"] + "/variograd_utils"
+        self.utils_dir = f"{pkg_path}"
         self.mesh10k_dir = directories["mesh10k_dir"]
         
         self.subj_list = np.loadtxt(directories["subj_list"]).astype("int32")
