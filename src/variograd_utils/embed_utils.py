@@ -18,7 +18,7 @@ def kernelize(A, kernel="linear", scale=50):
     A : array-like
         The input matrix
     kernel : str
-        The kernel to apply. Options are "cauchy", "log", "gauss", "linear"
+        The kernel to apply. Options are "cauchy", "gauss", "linear"
     scale : float
         The scaling parameter for the kernel
         
@@ -30,12 +30,10 @@ def kernelize(A, kernel="linear", scale=50):
 
     if kernel == 'cauchy':
         A = 1.0 / (1.0 + (A ** 2) / (scale ** 2))
-    elif kernel == 'log':
-        A = np.log(1.0 + (A ** 2) / (scale ** 2))
     elif kernel == 'gauss':
         A = np.exp(-0.5 * (A ** 2) / (scale ** 2))
     elif kernel == "linear":
-        A = A / scale
+        A = 1 / (1 + A / scale)
     else:
         raise ValueError("Unknown kernel type")
     
