@@ -196,6 +196,8 @@ class subject:
 
 
     def load_grads(self, h=None, k=32, assign=True):
+        if k==32:
+            raise NotImplementedError("32k gradients are not implemented yet")
         if h:
             vinfo = hcp.vertex_info if k==32 else vertex_info_10k
             start = 0 if h=="L" else vinfo[f"gray{h.lower()}"].size
