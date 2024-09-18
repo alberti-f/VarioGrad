@@ -7,6 +7,8 @@ from sklearn.utils import Bunch
 import variograd_utils
 from variograd_utils import *
 from itertools import combinations
+import hcp_utils as hcp
+from variograd_utils.brain_utils import save_gifti, vertex_info_10k
 
 def create_bunch_from(A):
     if isinstance(A, str):
@@ -178,7 +180,7 @@ class subject:
 
     def outpath(self, filename, replace=True):
         filename = f"{dataset().output_dir}/{self.id}/{filename}"
-        if os.exists(filename) & ~replace:
+        if os.exists(filename) & (not replace):
             raise ValueError("This file already exists. Change 'filename' or set 'replace' to True")
         return filename
 
@@ -195,13 +197,13 @@ class subject:
 
     def load_grads(self, h=None, k=32, assign=True):
         if h:
-            gradients = nib.load(self.outpath(f"/Analysis/{self.id}.{h}.DME_1.{k}k_fs_LR.shape.gii")).darrays[0].data
+            vinfo = hcp.vertex_info if k==32 else vertex_info_10k
+            start = 0 if h=="L" else vinfo[f"gray{h.lower()}"].size
+            stop = vinfo[f"gray{h.lower()}"].size if h=="L" else None
+            gradients = np.load(self.outpath(f"{self.id}.REST_FC_embedding.npy"))[:, slice(start, stop)]
         else:
-            Gl = nib.load(self.outpath(f"/Analysis/{self.id}.L.DME_1.{k}k_fs_LR.shape.gii")).darrays[0].data
-            Gr = nib.load(self.outpath(f"/Analysis/{self.id}.R.DME_1.{k}k_fs_LR.shape.gii")).darrays[0].data
-            gradients = np.hstack([Gl, Gr])
+            gradients = np.load(self.outpath(f"{self.id}.REST_FC_embedding.npy"))[:, slice(start, stop)]
             h = "LR"
-
         if assign:
             return gradients
         
