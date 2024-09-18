@@ -202,7 +202,7 @@ class subject:
             vinfo = hcp.vertex_info if k==32 else vertex_info_10k
             start = 0 if h=="L" else vinfo[f"gray{h.lower()}"].size
             stop = vinfo[f"gray{h.lower()}"].size if h=="L" else None
-            gradients = np.load(self.outpath(f"{self.id}.REST_FC_embedding.npy"))[:, slice(start, stop)]
+            gradients = np.load(self.outpath(f"{self.id}.REST_FC_embedding.npy"))[slice(start, stop), :]
         else:
             gradients = np.load(self.outpath(f"{self.id}.REST_FC_embedding.npy"))
             h = "LR"
