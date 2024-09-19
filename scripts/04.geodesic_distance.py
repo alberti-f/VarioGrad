@@ -26,19 +26,19 @@ from variograd_utils.core_utils import dataset, subject
 index = int(sys.argv[1])-1
 
 data = dataset()
-id = data.subj_list[index]
+ID = data.subj_list[index]
 
 command = "wb_command -surface-geodesic-distance-all-to-all {0} {1}"
 
-subj = subject(id)
+subj = subject(ID)
 
 for h in ["L", "R"]:
 
-    filename = data.outpath(f"{id}.{h}.gdist_triu.10k_fs_LR.npy")
+    filename = data.outpath(f"{ID}.{h}.gdist_triu.10k_fs_LR.npy")
     if os.path.exists(filename):
         continue
     surface = getattr(subj, f"{h}_cortex_midthickness_10k_T1w")
-    dconn = data.outpath(f"{id}.tmp.{h}.geodesic_distance.dconn.nii")
+    dconn = data.outpath(f"{ID}.tmp.{h}.geodesic_distance.dconn.nii")
     run(command.format(surface, dconn), shell=True, check=True)
     gdist_matrix = nib.load(dconn)
 
