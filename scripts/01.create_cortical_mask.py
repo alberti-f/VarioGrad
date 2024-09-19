@@ -1,28 +1,27 @@
 # Generate group-level CortexMask for the 10k_fs_LR surface.
-#           This script was used to generate masks separating the cortical mantle 
+#           This script was used to generate masks separating the cortical surface
 #           from the medial wall. These are necessary to later on remove the
 #           medial wall from individual surfaces when computing the
 #           geodesic distance between vertices in WorkBench
 #
 #           Note: The script assumes that the 32k and 10k spheres are found in
 #           <group-dir> and <group-dir>/10k_fs_LR/ respectively
-#           
+#
 #           usage: python create_cortex_dlabel <group-dir>
 #                   <group-dir>:    directory containing the goup average
 #                                   surfaces and the 10k_fs_LR subdirectory
 # ------------------------------------------------------------------
 
+from subprocess import run
 import numpy as np
 from nibabel import gifti, save, load
 import hcp_utils as hcp
-from subprocess import run
-from variograd_utils import *
+from variograd_utils.core_utils import dataset
 
 data = dataset()
 group_dir = data.group_dir
 mesh10k_dir = data.mesh10k_dir
 output_dir = data.output_dir
-
 
 # set formattable paths
 mask32k_path = output_dir + "/S1200.{0}.CortexMask.32k_fs_LR.shape.gii"
@@ -32,8 +31,10 @@ sphere10k_path = mesh10k_dir + "/S1200.{0}.sphere.10k_fs_LR.surf.gii"
 
 # get cortex vertices
 vinfo = hcp.vertex_info
-left_cortex = np.zeros(vinfo.num_meshl); left_cortex[vinfo.grayl] = 1
-right_cortex = np.zeros(vinfo.num_meshr); right_cortex[vinfo.grayr] = 1
+left_cortex = np.zeros(vinfo.num_meshl)
+left_cortex[vinfo.grayl] = 1
+right_cortex = np.zeros(vinfo.num_meshr)
+right_cortex[vinfo.grayr] = 1
 
 left_cortex=gifti.GiftiDataArray(data=left_cortex, intent=0, datatype="NIFTI_TYPE_INT32")
 right_cortex=gifti.GiftiDataArray(data=right_cortex, intent=0, datatype="NIFTI_TYPE_INT32")
@@ -59,12 +60,12 @@ command = f"\
                                 BARYCENTRIC {mask10k_path.format('R')} ;\
     wb_command -metric-math '(x>0)' {mask10k_path.format('R')} -var 'x' {mask10k_path.format('R')} \
     "
+run(command, shell=True, check=True)
 
 #create .npz with vertex info for use by brain_utils module
 vinfo = {}
-run(command, shell=True)
 for h in ["L", "R"]:
-    mask = load(f"{data.output_dir}/S1200.{h}.CortexMask.10k_fs_LR.shape.gii").darrays[0].data.astype("bool")
+    mask = load(mask10k_path.format(h)).darrays[0].data.astype("bool")
     vinfo[f"num_mesh{h.lower()}"] = len(mask)
     vinfo[f"gray{h.lower()}"] = np.arange(len(mask))[mask]
     vinfo[f"offset{h.lower()}"] = len(mask)*(h=="R")
