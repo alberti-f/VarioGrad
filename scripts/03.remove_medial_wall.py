@@ -20,11 +20,11 @@ Note:
     The mesh10k_dir variable in the directories.txt file should point to this directory.
 """
 
-from variograd_utils import *
-import nibabel as nib
-import surfdist as sd 
 import sys
 from os.path import exists
+import surfdist as sd 
+from variograd_utils.core_utils import dataset, subject
+from variograd_utils.brain_utils import vertex_info_10k, save_gifti
 
 index = int(sys.argv[1])-1
 
@@ -40,8 +40,10 @@ for H in ["L", "R"]:
     cortex_surf = sd.utils.surf_keep_cortex(full_surf, cortex=cortex_idx)
     structure = ["CORTEX_LEFT" if H=="L" else "CORTEX_RIGHT"][0]
     filename = subj.outpath(f"/T1w/fsaverage_LR10k/{ID}.{H}.cortex_midthickness_MSMAll.10k_fs_LR.surf.gii")
-    save_gifti(darrays=cortex_surf, intents=[1008, 1009], dtypes=["NIFTI_TYPE_FLOAT32","NIFTI_TYPE_INT32"], 
-                filename=filename, structure=structure)
+    save_gifti(darrays=cortex_surf,
+               intents=[1008, 1009],
+               dtypes=["NIFTI_TYPE_FLOAT32","NIFTI_TYPE_INT32"],
+               filename=filename, structure=structure)
     
 if exists(subj.outpath(f"/T1w/fsaverage_LR10k/{ID}.L.cortex_midthickness_MSMAll.10k_fs_LR.surf.gii")):
     print("\tLeft successful: ", subj.outpath(f"/T1w/fsaverage_LR10k/{ID}.L.cortex_midthickness_MSMAll.10k_fs_LR.surf.gii"))

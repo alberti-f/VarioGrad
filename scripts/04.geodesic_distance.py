@@ -14,13 +14,13 @@ Parameters:
     specified in the directories.txt file
 """
 
-
-import nibabel as nib
-from subprocess import run
-from variograd_utils import *
-from os.path import exists
 import sys
 import os
+from subprocess import run
+import numpy as np
+import nibabel as nib
+from variograd_utils.core_utils import dataset, subject
+
 
 
 index = int(sys.argv[1])-1
@@ -35,15 +35,13 @@ subj = subject(id)
 for h in ["L", "R"]:
 
     filename = data.outpath(f"{id}.{h}.gdist_triu.10k_fs_LR.npy")
-    if exists(filename):
+    if os.path.exists(filename):
         continue
-    
     surface = getattr(subj, f"{h}_cortex_midthickness_10k_T1w")
     dconn = data.outpath(f"{id}.tmp.{h}.geodesic_distance.dconn.nii")
-    run(command.format(surface, dconn), shell=True)
+    run(command.format(surface, dconn), shell=True, check=True)
     gdist_matrix = nib.load(dconn)
 
-    np.save(filename, gdist_matrix.get_fdata(caching="unchanged")[np.triu_indices_from(gdist_matrix, k=1)].astype("float32"))
-
+    triu_idx = np.triu_indices_from(gdist_matrix, k=1)
+    np.save(filename, gdist_matrix.get_fdata(caching="unchanged")[triu_idx].astype("float32"))
     os.remove(dconn)
-    
