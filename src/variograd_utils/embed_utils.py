@@ -217,6 +217,7 @@ def _compute_diffusion_map(L, n_components=2, diffusion_time=1, random_state=Non
     lambdas[1:] = np.power(lambdas[1:], diffusion_time)
     embedding = psi[:, 1:n_components+1] @ np.diag(lambdas[1:n_components+1], 0)
     lambdas = lambdas[1:]
+    vectors = vectors[:, 1:]
 
     return embedding, vectors, lambdas
 
@@ -380,23 +381,26 @@ class JointEmbedding:
         joint_reference -= joint_reference.mean(axis=0)
         embedding -= - embedding.mean(axis=0)
 
-        independent_reference /= np.linalg.norm(independent_reference, axis=1, keepdims=True)
-        joint_reference /= np.linalg.norm(joint_reference, axis=1, keepdims=True)
-        embedding /= np.linalg.norm(embedding, axis=1, keepdims=True)
-
         s = 1
         if method == "sign_flip":
             to_flip = vector_wise_corr(embedding.copy(), independent_reference.copy()) < 0
             R = np.diag([-1 if i else 1 for i in to_flip])
         elif method == "rotation":
+            independent_reference /= np.linalg.norm(independent_reference)
+            joint_reference /= np.linalg.norm(joint_reference)
+            embedding /= np.linalg.norm(embedding)
             R, _ = orthogonal_procrustes(joint_reference, independent_reference)
         elif method == "dot_product":
             R = np.dot(joint_reference.T, independent_reference)
         elif method == "procrustes":
+            independent_reference /= np.linalg.norm(independent_reference)
+            joint_reference /= np.linalg.norm(joint_reference)
+            embedding /= np.linalg.norm(embedding)
             R, s = orthogonal_procrustes(joint_reference, independent_reference)
         else:
             raise ValueError(f"Unknown alignment method: {self.alignment}")
 
+        print(method.upper(), "R.T @ R = I -->", np.allclose(np.dot(R.T, R), np.eye(R.shape[1]), atol=1e-5))
         joint_reference = np.dot(joint_reference, R) * s
         embedding = np.dot(embedding, R) * s
 
