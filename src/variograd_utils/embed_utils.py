@@ -1,266 +1,10 @@
+import warnings
 import numpy as np
 from scipy.sparse import diags
 from scipy.linalg import orthogonal_procrustes
 from sklearn.metrics.pairwise import cosine_similarity, euclidean_distances
 from sklearn.decomposition import TruncatedSVD
 from variograd_utils.core_utils import vector_wise_corr
-import warnings
-
-def kernelize(A, kernel="linear", scale=None):
-    """
-    Apply kernel to a matrix A
-    
-    Parameters
-    ----------
-    A : array-like
-        The input matrix of shape smaples x features
-    kernel : str
-        The kernel to apply. Options are "cauchy", "gauss", "linear"
-    scale : float
-        The scaling parameter for the kernel
-        
-    Returns
-    -------
-    A : array-like
-        The kernelized matrix
-    """
-
-    if scale is None:
-        scale = 1 / A.shape[1]
-
-    if kernel == "cauchy":
-        A = 1.0 / (1.0 + (A ** 2) / (scale ** 2))
-
-    elif kernel == "gauss":
-        A = np.exp(-0.5 * (A ** 2) / (scale ** 2))
-
-    elif kernel == "linear":
-        A = 1 / (1 + A / scale)
-
-    else:
-        raise ValueError("Unknown kernel type")
-
-    return A
-
-
-def _affinity_matrix(M, method="cosine", scale=None):
-    """
-    Compute the affinity matrix between two matrices A and B
-    
-    Parameters
-    ----------
-    M : array-like
-        The input matrix of shape smaples x features
-    method : str
-        The method to compute the affinity matrix. Options are:
-        - "cosine": cosine similarity
-        - "correlation": Pearson correlation coefficient
-        - "linear": linear kernel
-        - "cauchy": Cauchy kernel
-        - "gauss": Gaussian kernel
-          
-    scale : float
-        The scaling parameter for the kernel
-    
-    Returns
-    -------
-    A : array-like
-        The affinity matrix
-    """
-
-    if method == "cosine":
-        A = cosine_similarity(M)
-
-    elif method == "correlation":
-        A = np.corrcoef(M)
-
-    elif method in {"linear", "cauchy", "gauss"}:
-        A = euclidean_distances(M)
-        A = kernelize(A, kernel=method, scale=scale)
-    
-    else:
-        raise ValueError("Unknown affinity method")
-
-    return A
-
-
-def diffusion_map_embedding(A, n_components=2, alpha=0.5, diffusion_time=1, random_state=None):
-    """
-    Computes the joint diffusion map embedding of an adjaciency matrix.
-
-    Parameters:
-    ----------
-    A : np.ndarray
-        Target matrix to embed.
-    n_components: int, optional
-        Number of components to keep (default=2).
-    alpha: float, optional
-        Controls Laplacian normalization, balancing local and global structures in embeddings. 
-        Alpha <= 0.5 emphasize local structures, alpha >= 1 focus on global organization.
-    diffusion_time: float, optional
-        Determines the scale of the random walk process (default=1).
-    random_state: int, optional
-        Random seed of the SVD.
-    
-    Returns:
-    -------
-    self : JointEmbedding
-        Fitted instance of JointEmbedding.
-    """
-
-    if np.any(A < 0):
-        warnings.warn("Negative values in the adjaciency matrix set to 0", RuntimeWarning)
-        A[A<0] = 0
-
-    L = _random_walk_laplacian(A, alpha=alpha)
-
-    embedding, vectors, lambdas = _diffusion_map(L, n_components=n_components,
-                                                           diffusion_time=diffusion_time,
-                                                           random_state=random_state)
-
-    return embedding, vectors, lambdas
-
-
-def laplacian_eigenmap(A, n_components=2, normalized=True, random_state=None):
-    """
-    Computes the spectral embedding of an adjaciency matrix.
-
-    Parameters:
-    ----------
-    A : np.ndarray
-        Target matrix to embed.
-    n_components: int, optional
-        Number of components to compute (default=2).
-    normalized: bool, optional
-        Whether to normalize the Laplacian matrix (default=True).
-    random_state: int, optional
-        Random seed of the SVD.
-    
-    Returns:
-    -------
-    self : JointEmbedding
-        Fitted instance of JointEmbedding.
-    """
-
-    if np.any(A < 0):
-        warnings.warn("Negative values in the adjaciency matrix set to 0", RuntimeWarning)
-        A[A<0] = 0
-
-    L = _laplacian(A, normalized=normalized)
-
-    n_components = n_components + 1
-    svd = TruncatedSVD(n_components=n_components, random_state=random_state)
-    embedding = svd.fit_transform(L)[:, 1:]
-    vectors = svd.components_.T[:, 1:]
-    lambdas = svd.singular_values_[1:]
-
-    return embedding, vectors, lambdas
-
-
-def _laplacian(A, normalized=True):
-    """
-    Computes the Laplacian of an affinity matrix A.
-
-    Parameters:
-    ----------
-    A : np.ndarray
-        Affinity matrix.
-    normalized : bool, optional
-        Compute the normalized Laplacian (default=True).
-
-    Returns:
-    -------
-    L : np.ndarray
-        Laplacian matrix of M.
-    """
-    
-    if (A.shape[0] != A.shape[1]) or np.array_equal(A, A.T):
-        raise ValueError("A must be a squared, symmetrical affinity matrix.")
-
-    # Calculate degree
-    D = np.sum(M, axis=1).reshape(-1, 1)
-
-    # Compute the Laplacian matrix
-    if normalized:
-        L = -M / np.sqrt(D @ D.T)
-
-    else:
-        L = np.diag(D.squeeze()) - M         
-
-    return L
-
-
-def _random_walk_laplacian(A, alpha=0.5):
-    """
-    Computes the random walk Laplacian of an affinity matrix A.
-
-    Parameters:
-    ----------
-    A: np.ndarray
-        Affinity matrix.
-    alpha: float, optional
-        Controls Laplacian normalization, balancing local and global structures in embeddings. 
-        Alpha <= 0.5 emphasize local structures, alpha >= 1 focus on global organization.
-    
-    Returns:
-    -------
-    L : np.ndarray
-        The random walk Laplacian of A.
-    """
-
-    if (A.shape[0] != A.shape[1]) or np.array_equal(A, A.T):
-        raise ValueError("A must be a squared, symmetrical affinity matrix.")
-
-    # Compute the normalized Laplacian
-    degree = np.sum(A, axis=1)
-    d_alpha = diags(np.power(degree, -alpha))
-    L_alpha = d_alpha @ A @ d_alpha
-
-    # Compute the random walk Laplacian
-    degree = np.sum(L_alpha, axis=1)
-    d_alpha = diags(np.power(degree, -1))
-    L = d_alpha @ L_alpha
-
-    return L
-
-def _diffusion_map(L, n_components=2, diffusion_time=1, random_state=None):
-    """
-    Computes the diffusion map of the random walk Laplacian L.
-    
-    Parameters:
-    ----------
-    L: np.ndarray
-        Random walk Laplacian.
-    n_components: int, optional
-        Number of components to compute (default=2).
-    diffusion_time: float, optional
-        Determines the scale of the random walk process (default=1).
-    random_state: int, optional
-        Random seed of the SVD.    
-    
-    Returns:
-    -------
-    L : np.ndarray
-        The reference Laplacian matrix.
-    """
-
-    n_components = n_components + 1
-    embedding = TruncatedSVD(n_components=n_components,
-                             random_state=random_state
-                             ).fit(L)
-    vectors = embedding.components_.T
-    lambdas = embedding.singular_values_
-    if np.any(vectors[:, 0] == 0):
-        warnings.warn("0 values found in the first eigenvector; 1e-15 was added to all vectors.", RuntimeWarning)
-        vectors += 1e-16
-
-    psi = vectors / np.tile(vectors[:, 0], (vectors.shape[1], 1)).T
-    lambdas[1:] = np.power(lambdas[1:], diffusion_time)
-    embedding = psi[:, 1:n_components] @ np.diag(lambdas[1:n_components], 0)
-    lambdas = lambdas[1:]
-    vectors = vectors[:, 1:]
-
-    return embedding, vectors, lambdas
 
 
 class JointEmbedding:
@@ -458,4 +202,261 @@ class JointEmbedding:
         embedding /= np.linalg.norm(embedding)
 
         return embedding, joint_reference
+
+
+def _affinity_matrix(M, method="cosine", scale=None):
+    """
+    Compute the affinity matrix between two matrices A and B
     
+    Parameters
+    ----------
+    M : array-like
+        The input matrix of shape smaples x features
+    method : str
+        The method to compute the affinity matrix. Options are:
+        - "cosine": cosine similarity
+        - "correlation": Pearson correlation coefficient
+        - "linear": linear kernel
+        - "cauchy": Cauchy kernel
+        - "gauss": Gaussian kernel
+          
+    scale : float
+        The scaling parameter for the kernel
+    
+    Returns
+    -------
+    A : array-like
+        The affinity matrix
+    """
+
+    if method == "cosine":
+        A = cosine_similarity(M)
+
+    elif method == "correlation":
+        A = np.corrcoef(M)
+
+    elif method in {"linear", "cauchy", "gauss"}:
+        A = euclidean_distances(M)
+        A = kernelize(A, kernel=method, scale=scale)
+    
+    else:
+        raise ValueError("Unknown affinity method")
+
+    return A
+
+
+def kernelize(A, kernel="linear", scale=None):
+    """
+    Apply kernel to a matrix A
+    
+    Parameters
+    ----------
+    A : array-like
+        The input matrix of shape smaples x features
+    kernel : str
+        The kernel to apply. Options are "cauchy", "gauss", "linear"
+    scale : float
+        The scaling parameter for the kernel
+        
+    Returns
+    -------
+    A : array-like
+        The kernelized matrix
+    """
+
+    if scale is None:
+        scale = 1 / A.shape[1]
+
+    if kernel == "cauchy":
+        A = 1.0 / (1.0 + (A ** 2) / (scale ** 2))
+
+    elif kernel == "gauss":
+        A = np.exp(-0.5 * (A ** 2) / (scale ** 2))
+
+    elif kernel == "linear":
+        A = 1 / (1 + A / scale)
+
+    else:
+        raise ValueError("Unknown kernel type")
+
+    return A
+
+
+def diffusion_map_embedding(A, n_components=2, alpha=0.5, diffusion_time=1, random_state=None):
+    """
+    Computes the joint diffusion map embedding of an adjaciency matrix.
+
+    Parameters:
+    ----------
+    A : np.ndarray
+        Target matrix to embed.
+    n_components: int, optional
+        Number of components to keep (default=2).
+    alpha: float, optional
+        Controls Laplacian normalization, balancing local and global structures in embeddings. 
+        Alpha <= 0.5 emphasize local structures, alpha >= 1 focus on global organization.
+    diffusion_time: float, optional
+        Determines the scale of the random walk process (default=1).
+    random_state: int, optional
+        Random seed of the SVD.
+    
+    Returns:
+    -------
+    self : JointEmbedding
+        Fitted instance of JointEmbedding.
+    """
+
+    if np.any(A < 0):
+        warnings.warn("Negative values in the adjaciency matrix set to 0", RuntimeWarning)
+        A[A<0] = 0
+
+    L = _random_walk_laplacian(A, alpha=alpha)
+
+    embedding, vectors, lambdas = _diffusion_map(L, n_components=n_components,
+                                                           diffusion_time=diffusion_time,
+                                                           random_state=random_state)
+
+    return embedding, vectors, lambdas
+
+
+def _diffusion_map(L, n_components=2, diffusion_time=1, random_state=None):
+    """
+    Computes the diffusion map of the random walk Laplacian L.
+    
+    Parameters:
+    ----------
+    L: np.ndarray
+        Random walk Laplacian.
+    n_components: int, optional
+        Number of components to compute (default=2).
+    diffusion_time: float, optional
+        Determines the scale of the random walk process (default=1).
+    random_state: int, optional
+        Random seed of the SVD.    
+    
+    Returns:
+    -------
+    L : np.ndarray
+        The reference Laplacian matrix.
+    """
+
+    n_components = n_components + 1
+    embedding = TruncatedSVD(n_components=n_components,
+                             random_state=random_state
+                             ).fit(L)
+    vectors = embedding.components_.T
+    lambdas = embedding.singular_values_
+    if np.any(vectors[:, 0] == 0):
+        warnings.warn("0 values found in the first eigenvector; 1e-15 was added to all vectors.", RuntimeWarning)
+        vectors += 1e-16
+
+    psi = vectors / np.tile(vectors[:, 0], (vectors.shape[1], 1)).T
+    lambdas[1:] = np.power(lambdas[1:], diffusion_time)
+    embedding = psi[:, 1:n_components] @ np.diag(lambdas[1:n_components], 0)
+    lambdas = lambdas[1:]
+    vectors = vectors[:, 1:]
+
+    return embedding, vectors, lambdas
+
+
+def _random_walk_laplacian(A, alpha=0.5):
+    """
+    Computes the random walk Laplacian of an affinity matrix A.
+
+    Parameters:
+    ----------
+    A: np.ndarray
+        Affinity matrix.
+    alpha: float, optional
+        Controls Laplacian normalization, balancing local and global structures in embeddings. 
+        Alpha <= 0.5 emphasize local structures, alpha >= 1 focus on global organization.
+    
+    Returns:
+    -------
+    L : np.ndarray
+        The random walk Laplacian of A.
+    """
+
+    if (A.shape[0] != A.shape[1]) or np.array_equal(A, A.T):
+        raise ValueError("A must be a squared, symmetrical affinity matrix.")
+
+    # Compute the normalized Laplacian
+    degree = np.sum(A, axis=1)
+    d_alpha = diags(np.power(degree, -alpha))
+    L_alpha = d_alpha @ A @ d_alpha
+
+    # Compute the random walk Laplacian
+    degree = np.sum(L_alpha, axis=1)
+    d_alpha = diags(np.power(degree, -1))
+    L = d_alpha @ L_alpha
+
+    return L
+
+
+def laplacian_eigenmap(A, n_components=2, normalized=True, random_state=None):
+    """
+    Computes the spectral embedding of an adjaciency matrix.
+
+    Parameters:
+    ----------
+    A : np.ndarray
+        Target matrix to embed.
+    n_components: int, optional
+        Number of components to compute (default=2).
+    normalized: bool, optional
+        Whether to normalize the Laplacian matrix (default=True).
+    random_state: int, optional
+        Random seed of the SVD.
+    
+    Returns:
+    -------
+    self : JointEmbedding
+        Fitted instance of JointEmbedding.
+    """
+
+    if np.any(A < 0):
+        warnings.warn("Negative values in the adjaciency matrix set to 0", RuntimeWarning)
+        A[A<0] = 0
+
+    L = _laplacian(A, normalized=normalized)
+
+    n_components = n_components + 1
+    svd = TruncatedSVD(n_components=n_components, random_state=random_state)
+    embedding = svd.fit_transform(L)[:, 1:]
+    vectors = svd.components_.T[:, 1:]
+    lambdas = svd.singular_values_[1:]
+
+    return embedding, vectors, lambdas
+
+
+def _laplacian(A, normalized=True):
+    """
+    Computes the Laplacian of an affinity matrix A.
+
+    Parameters:
+    ----------
+    A : np.ndarray
+        Affinity matrix.
+    normalized : bool, optional
+        Compute the normalized Laplacian (default=True).
+
+    Returns:
+    -------
+    L : np.ndarray
+        Laplacian matrix of M.
+    """
+    
+    if (A.shape[0] != A.shape[1]) or np.array_equal(A, A.T):
+        raise ValueError("A must be a squared, symmetrical affinity matrix.")
+
+    # Calculate degree
+    D = np.sum(M, axis=1).reshape(-1, 1)
+
+    # Compute the Laplacian matrix
+    if normalized:
+        L = -M / np.sqrt(D @ D.T)
+
+    else:
+        L = np.diag(D.squeeze()) - M         
+
+    return L
