@@ -142,7 +142,7 @@ class JointEmbedding:
         embedding_M = embedding[n:]
 
         if self.alignment is not None:
-            A = _affinity_matrix(R, method=affinity, scale=scale) if self.alignment != "precomputed" else R
+            A = _affinity_matrix(R, method=affinity, scale=scale) if affinity != "precomputed" else R
             embedding_R_ind, _, _ = embedding_function(A, n_components=self.n_components,
                                                        random_state=self.random_state,
                                                        **method_kwargs)
