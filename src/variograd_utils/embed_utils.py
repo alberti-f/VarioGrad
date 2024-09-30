@@ -50,9 +50,17 @@ def _affinity_matrix(M, method="cosine", scale=None):
     Parameters
     ----------
     M : array-like
-        The distance matrix to convert to affinity
+        The input matrix of shape smaples x features
     method : str
-        The method to compute the affinity. Options are "cosine", "correlation"
+        The method to compute the affinity matrix. Options are:
+        - "cosine": cosine similarity
+        - "correlation": Pearson correlation coefficient
+        - "linear": linear kernel
+        - "cauchy": Cauchy kernel
+        - "gauss": Gaussian kernel
+          
+    scale : float
+        The scaling parameter for the kernel
     
     Returns
     -------
@@ -82,14 +90,17 @@ def diffusion_map_embedding(A, n_components=2, alpha=0.5, diffusion_time=1, rand
 
     Parameters:
     ----------
-    M : np.ndarray
+    A : np.ndarray
         Target matrix to embed.
-    R : np.ndarray
-        Reference matrix.
+    n_components: int, optional
+        Number of components to keep (default=2).
     alpha: float, optional
-        Modulates contribution of nodes based on their degeree (default=0.5).
-    diffusion_time: float, optional 
-        Diffusion time of signal on the graph (default=1).
+        Controls Laplacian normalization, balancing local and global structures in embeddings. 
+        Alpha <= 0.5 emphasize local structures, alpha >= 1 focus on global organization.
+    diffusion_time: float, optional
+        Determines the scale of the random walk process (default=1).
+    random_state: int, optional
+        Random seed of the SVD.
     
     Returns:
     -------
@@ -103,7 +114,7 @@ def diffusion_map_embedding(A, n_components=2, alpha=0.5, diffusion_time=1, rand
 
     L = _random_walk_laplacian(A, alpha=alpha)
 
-    embedding, vectors, lambdas = _compute_diffusion_map(L, n_components=n_components,
+    embedding, vectors, lambdas = _diffusion_map(L, n_components=n_components,
                                                            diffusion_time=diffusion_time,
                                                            random_state=random_state)
 
@@ -116,10 +127,14 @@ def laplacian_eigenmap(A, n_components=2, normalized=True, random_state=None):
 
     Parameters:
     ----------
-    M : np.ndarray
+    A : np.ndarray
         Target matrix to embed.
+    n_components: int, optional
+        Number of components to compute (default=2).
     normalized: bool, optional
         Whether to normalize the Laplacian matrix (default=True).
+    random_state: int, optional
+        Random seed of the SVD.
     
     Returns:
     -------
@@ -142,21 +157,26 @@ def laplacian_eigenmap(A, n_components=2, normalized=True, random_state=None):
     return embedding, vectors, lambdas
 
 
-def _laplacian(M, normalized=True):
+def _laplacian(A, normalized=True):
     """
-    Computes the Laplacian matrix.
+    Computes the Laplacian of an affinity matrix A.
 
     Parameters:
     ----------
-    R : np.ndarray
+    A : np.ndarray
         Affinity matrix.
+    normalized : bool, optional
+        Compute the normalized Laplacian (default=True).
 
     Returns:
     -------
     L : np.ndarray
-        The reference Laplacian matrix.
+        Laplacian matrix of M.
     """
     
+    if (A.shape[0] != A.shape[1]) or np.array_equal(A, A.T):
+        raise ValueError("A must be a squared, symmetrical affinity matrix.")
+
     # Calculate degree
     D = np.sum(M, axis=1).reshape(-1, 1)
 
@@ -170,27 +190,31 @@ def _laplacian(M, normalized=True):
     return L
 
 
-def _random_walk_laplacian(M, alpha=0.5):
+def _random_walk_laplacian(A, alpha=0.5):
     """
-    Computes the random walk Laplacian matrix.
+    Computes the random walk Laplacian of an affinity matrix A.
 
     Parameters:
     ----------
-    M: np.ndarray
+    A: np.ndarray
         Affinity matrix.
     alpha: float, optional
-        Modulates contribution of nodes based on their degeree (default=0.5).
+        Controls Laplacian normalization, balancing local and global structures in embeddings. 
+        Alpha <= 0.5 emphasize local structures, alpha >= 1 focus on global organization.
     
     Returns:
     -------
     L : np.ndarray
-        The reference Laplacian matrix.
+        The random walk Laplacian of A.
     """
 
+    if (A.shape[0] != A.shape[1]) or np.array_equal(A, A.T):
+        raise ValueError("A must be a squared, symmetrical affinity matrix.")
+
     # Compute the normalized Laplacian
-    degree = np.sum(M, axis=1)
+    degree = np.sum(A, axis=1)
     d_alpha = diags(np.power(degree, -alpha))
-    L_alpha = d_alpha @ M @ d_alpha
+    L_alpha = d_alpha @ A @ d_alpha
 
     # Compute the random walk Laplacian
     degree = np.sum(L_alpha, axis=1)
@@ -199,16 +223,20 @@ def _random_walk_laplacian(M, alpha=0.5):
 
     return L
 
-def _compute_diffusion_map(L, n_components=2, diffusion_time=1, random_state=None):
+def _diffusion_map(L, n_components=2, diffusion_time=1, random_state=None):
     """
-    Computes the diffusion maps from the random walk Laplacian
+    Computes the diffusion map of the random walk Laplacian L.
     
     Parameters:
     ----------
     L: np.ndarray
         Random walk Laplacian.
-    diffusion_time: float, optional 
-        Diffusion time of signal on the graph (default=1).
+    n_components: int, optional
+        Number of components to compute (default=2).
+    diffusion_time: float, optional
+        Determines the scale of the random walk process (default=1).
+    random_state: int, optional
+        Random seed of the SVD.    
     
     Returns:
     -------
@@ -250,7 +278,7 @@ class JointEmbedding:
 
     def fit_transform(self, M, R, C=None, affinity="cosine", scale=None, method_kwargs=None):
         """
-        Fit the specified embedding method and return fitted data.
+        Compute the joint embedding of M and R using the specified method.
 
         Parameters:
         ----------
@@ -260,12 +288,31 @@ class JointEmbedding:
             Reference matrix.
         C : np.ndarray, optional
             Correspondence matrix.
-        affinity : method used to generate the joint affinity matrix.
-        
+            If affinity is not "precomputed", C is used as is and the
+            specified affinity method is applied only to while M and R.
+        affinity : str, optional
+            The method to compute the affinity matrices. Options are:
+            - "cosine": cosine similarity (default)
+            - "correlation": Pearson correlation coefficient
+            - "linear": linear kernel
+            - "cauchy": Cauchy kernel
+            - "gauss": Gaussian kernel
+            - "precomputed": precomputed affinity matrix.
+                            In this case, M and R are assumed to be adjaciency matrices
+                            and a correspondence matrix C must be specified.
+        scale : float, optional
+            The scaling parameter for the kernel methods.
+        method_kwargs : dict, optional
+            Additional keyword arguments for the embedding method.
+
         Returns:
         -------
         self : JointEmbedding
             Fitted instance of JointEmbedding.
+        embedding_M : np.ndarray
+            The joint embedding of M.
+        embedding_R : np.ndarray
+            The joint embedding of R.
         """
 
         if (affinity == "precomputed") & (C is None):
@@ -279,7 +326,7 @@ class JointEmbedding:
             C = np.array(C, copy=self.copy)
 
         A = self._joint_adjacency_matrix(M, R, C=C, affinity=affinity, scale=scale)
-        
+
         method_kwargs = {} if method_kwargs is None else method_kwargs
         embedding_function = diffusion_map_embedding if self.method == "dme" else laplacian_eigenmap
         embedding, vectors, lambdas = embedding_function(A, n_components=self.n_components,
@@ -291,14 +338,14 @@ class JointEmbedding:
         embedding_M = embedding[n:]
 
         if self.alignment is not None:
-            A = _affinity_matrix(R, method=affinity, scale=scale) if self.alignment == "precomputed" else R
+            A = _affinity_matrix(R, method=affinity, scale=scale) if self.alignment != "precomputed" else R
             embedding_R_ind, _, _ = embedding_function(A, n_components=self.n_components,
                                                        random_state=self.random_state,
                                                        **method_kwargs)
             embedding_M, embedding_R = self._align_embeddings(embedding_M, embedding_R,
                                                               embedding_R_ind, method=self.alignment)
             self.independent_ref = embedding_R_ind
-            
+
         return embedding_M, embedding_R
 
 
@@ -314,12 +361,16 @@ class JointEmbedding:
             Reference matrix.
         C : np.ndarray, optional
             Correspondence matrix.
-        method : str, optional
-            The method to use for the joint embedding:
-            - dme: diffusion map embedding (default).
-            - lem: laplacian eigenmaps
+            If affinity is not "precomputed", C is used as is and the
+            specified affinity method is applied only to while M and R.
         affinity : str, optional
-            The method to compute the affinity matrix.
+            The method to compute the affinity matrices. Options are:
+            - "cosine": cosine similarity (default)
+            - "correlation": Pearson correlation coefficient
+            - "linear": linear kernel
+            - "cauchy": Cauchy kernel
+            - "gauss": Gaussian kernel
+            - "precomputed": precomputed affinity matrix.
         scale : float, optional
             The scaling parameter for the kernel methods.
         
@@ -328,6 +379,7 @@ class JointEmbedding:
         A : np.ndarray
             The joint adjacency matrix.
         """
+
         if C is None:
             A = np.vstack([R, M])
             A = _affinity_matrix(A, method=affinity, scale=scale)
@@ -342,10 +394,11 @@ class JointEmbedding:
 
         return A
 
+
     def _align_embeddings(self, embedding, joint_reference, independent_reference,
                           method="rotation"):
         """
-        Aligns the joint embedding with the reference embedding.
+        Align the joint embedding with the independently computed reference embedding.
 
         Parameters:
         ----------
@@ -355,11 +408,20 @@ class JointEmbedding:
             The reference embedding.
         method : str, optional
             The alignment method to use:
-            - rotation: dot product of the singular vectors of the covariance matrix (default).
-            - procrustes: dot product of the singular vectors of the covariance matrix scaled 
-                          by the variance.
-            - sign flip: flips the sign of the singular vectors with negative correlation with
-                         the reference.
+            - "procrustes": orthogonal Procrustes rotation with scaling.
+            - "rotation": orthogonal Procrustes rotation (default)
+            - "sign_flip": multiply the embedding dimension by -1 if the correlation with
+                the corresponding dimension in the reference is negative.
+            - "dot_product": align the embedding using the dot product of the joint reference
+                and independent reference embeddings.
+            
+        Returns:
+        -------
+        embedding : np.ndarray
+            The aligned joint embedding.
+        reference : np.ndarray
+            The aligned reference embedding.
+
         """
 
         independent_reference -= independent_reference.mean(axis=0)
