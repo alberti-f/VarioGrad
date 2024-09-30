@@ -1,18 +1,19 @@
 import numpy as np
 from scipy.sparse import diags
 from scipy.linalg import orthogonal_procrustes
-from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.metrics.pairwise import cosine_similarity, euclidean_distances
 from sklearn.decomposition import TruncatedSVD
 from variograd_utils.core_utils import vector_wise_corr
+import warnings
 
-def kernelize(A, kernel="linear", scale=50):
+def kernelize(A, kernel="linear", scale=None):
     """
     Apply kernel to a matrix A
     
     Parameters
     ----------
     A : array-like
-        The input matrix
+        The input matrix of shape smaples x features
     kernel : str
         The kernel to apply. Options are "cauchy", "gauss", "linear"
     scale : float
@@ -24,55 +25,55 @@ def kernelize(A, kernel="linear", scale=50):
         The kernelized matrix
     """
 
+    if scale is None:
+        scale = 1 / A.shape[1]
+
     if kernel == "cauchy":
         A = 1.0 / (1.0 + (A ** 2) / (scale ** 2))
+
     elif kernel == "gauss":
         A = np.exp(-0.5 * (A ** 2) / (scale ** 2))
+
     elif kernel == "linear":
         A = 1 / (1 + A / scale)
+
     else:
         raise ValueError("Unknown kernel type")
 
     return A
 
 
-def _affinity_matrix(A, B=None, method="cosine", scale=None):
+def _affinity_matrix(M, method="cosine", scale=None):
     """
     Compute the affinity matrix between two matrices A and B
     
     Parameters
     ----------
-    A : array-like
-        The first matrix
-    B : array-like
-        The second matrix
+    M : array-like
+        The distance matrix to convert to affinity
     method : str
         The method to compute the affinity. Options are "cosine", "correlation"
     
     Returns
     -------
-    M : array-like
+    A : array-like
         The affinity matrix
     """
 
-    if scale is None and method in ["linear", "cauchy", "gauss"]:
-        raise ValueError("Scaling parameter must be provided for kernel methods")
-
-
     if method == "cosine":
-        B = A if B is None else B
-        M = cosine_similarity(A, B)
+        A = cosine_similarity(M)
+
     elif method == "correlation":
-        B = A if B is None else B
-        M = np.corrcoef(A, B)[:A.shape[0], A.shape[1]:]
-    elif method in ["linear", "cauchy", "gauss"] and B is None:
-        M = kernelize(A, kernel=method)
-    elif method in ["linear", "cauchy", "gauss"] and B is not None:
-        raise ValueError("Kernel methods are not supported when two matrices are provided")
+        A = np.corrcoef(M)
+
+    elif method in {"linear", "cauchy", "gauss"}:
+        A = euclidean_distances(M)
+        A = kernelize(A, kernel=method, scale=scale)
+    
     else:
         raise ValueError("Unknown affinity method")
 
-    return M
+    return A
 
 
 def diffusion_map_embedding(A, n_components=2, alpha=0.5, diffusion_time=1, random_state=None):
@@ -95,6 +96,10 @@ def diffusion_map_embedding(A, n_components=2, alpha=0.5, diffusion_time=1, rand
     self : JointEmbedding
         Fitted instance of JointEmbedding.
     """
+
+    if np.any(A < 0):
+        warnings.warn("Negative values in the adjaciency matrix set to 0", RuntimeWarning)
+        A[A<0] = 0
 
     L = _random_walk_laplacian(A, alpha=alpha)
 
@@ -122,6 +127,10 @@ def laplacian_eigenmap(A, n_components=2, normalized=True, random_state=None):
         Fitted instance of JointEmbedding.
     """
 
+    if np.any(A < 0):
+        warnings.warn("Negative values in the adjaciency matrix set to 0", RuntimeWarning)
+        A[A<0] = 0
+
     L = _laplacian(A, normalized=normalized)
 
     n_components = n_components + 1
@@ -147,13 +156,14 @@ def _laplacian(M, normalized=True):
     L : np.ndarray
         The reference Laplacian matrix.
     """
-
+    
     # Calculate degree
     D = np.sum(M, axis=1).reshape(-1, 1)
 
     # Compute the Laplacian matrix
     if normalized:
         L = -M / np.sqrt(D @ D.T)
+
     else:
         L = np.diag(D.squeeze()) - M         
 
@@ -207,15 +217,18 @@ def _compute_diffusion_map(L, n_components=2, diffusion_time=1, random_state=Non
     """
 
     n_components = n_components + 1
-    embedding = TruncatedSVD(n_components=n_components, 
-                                random_state=random_state
-                                ).fit(L) 
+    embedding = TruncatedSVD(n_components=n_components,
+                             random_state=random_state
+                             ).fit(L)
     vectors = embedding.components_.T
     lambdas = embedding.singular_values_
+    if np.any(vectors[:, 0] == 0):
+        warnings.warn("0 values found in the first eigenvector; 1e-15 was added to all vectors.", RuntimeWarning)
+        vectors += 1e-16
 
     psi = vectors / np.tile(vectors[:, 0], (vectors.shape[1], 1)).T
     lambdas[1:] = np.power(lambdas[1:], diffusion_time)
-    embedding = psi[:, 1:n_components+1] @ np.diag(lambdas[1:n_components+1], 0)
+    embedding = psi[:, 1:n_components] @ np.diag(lambdas[1:n_components], 0)
     lambdas = lambdas[1:]
     vectors = vectors[:, 1:]
 
@@ -223,36 +236,9 @@ def _compute_diffusion_map(L, n_components=2, diffusion_time=1, random_state=Non
 
 
 class JointEmbedding:
+    
     def __init__(self, method="dme", n_components=2, alignment=None,
                  random_state=None, copy=True):
-        """
-        Initializes the JointEmbedding class.
-
-        Parameters:
-        ----------
-        method : str, optional
-            The method to use for the joint embedding:
-            - dme: diffusion map embedding (default).
-            - lem: lablacian eigenmaps
-        n_components : int, optional
-            Number of embedding dimensions (default=2).
-        alignment : str, optional
-            Method to use (if any) to align the joint embedding of the
-            target matrix with an independent embedding of the reference.
-            - None: no alignment is performed (default).
-            - rotation: the rotation matrix obtained from the dot
-                        product of the joint reference embedding and the
-                        independent reference embedding.
-            - procrustes: procrustes analysis.
-            - sign_flip: flips the sign of the singular vectors with negative
-                         correlation with the reference.
-            - dot_product: dot product of the joint reference embedding and the
-                           independent reference embedding.
-        random_state : int, optional
-            Random seed (default=None).
-        copy : bool, optional
-            Indicates whether original arrays should be copyed or overwritten (default=False).
-        """
         self.method = method
         self.n_components = n_components
         self.random_state = random_state
@@ -261,8 +247,8 @@ class JointEmbedding:
         self.vectors = self.lambdas = None
         self.independent_ref = None
 
-    def fit_transform(self, M, R, C=None, affinity="cosine",
-                      method_kwargs=None):
+
+    def fit_transform(self, M, R, C=None, affinity="cosine", scale=None, method_kwargs=None):
         """
         Fit the specified embedding method and return fitted data.
 
@@ -281,39 +267,42 @@ class JointEmbedding:
         self : JointEmbedding
             Fitted instance of JointEmbedding.
         """
+
+        if (affinity == "precomputed") & (C is None):
+            raise ValueError("Precomputed affinity assumes M and R are already adjaciency matrices,"
+                             + "so a correspondance adjaciency matrx C must be specified too.")
         n = M.shape[0]
+
         R = np.array(R, copy=self.copy)
         M = np.array(M, copy=self.copy)
         if C is not None:
-            C = np.array(C, copy=not self.copy)
+            C = np.array(C, copy=self.copy)
 
-        A = self._joint_adjacency_matrix(M, R, C=C, affinity=affinity, method=self.method)
-
+        A = self._joint_adjacency_matrix(M, R, C=C, affinity=affinity, scale=scale)
+        
         method_kwargs = {} if method_kwargs is None else method_kwargs
-
         embedding_function = diffusion_map_embedding if self.method == "dme" else laplacian_eigenmap
         embedding, vectors, lambdas = embedding_function(A, n_components=self.n_components,
                                                             random_state=self.random_state,
                                                             **method_kwargs)
-
-        self.vectors = vectors[n:]
+        self.vectors = vectors
         self.lambdas = lambdas
-        embedding_R = embedding[n:]
-        embedding_M = embedding[:n]
+        embedding_R = embedding[:n]
+        embedding_M = embedding[n:]
 
         if self.alignment is not None:
-            A = _affinity_matrix(R, method=affinity)
+            A = _affinity_matrix(R, method=affinity, scale=scale) if self.alignment == "precomputed" else R
             embedding_R_ind, _, _ = embedding_function(A, n_components=self.n_components,
-                                                  random_state=self.random_state,
-                                                  **method_kwargs)
+                                                       random_state=self.random_state,
+                                                       **method_kwargs)
             embedding_M, embedding_R = self._align_embeddings(embedding_M, embedding_R,
                                                               embedding_R_ind, method=self.alignment)
             self.independent_ref = embedding_R_ind
-
+            
         return embedding_M, embedding_R
 
-    def _joint_adjacency_matrix(self, M, R, C=None,
-                                method="dme", affinity="cosine", scale=50):
+
+    def _joint_adjacency_matrix(self, M, R, C=None, affinity="cosine", scale=None):
         """
         Computes the joint adjacency matrix.
 
@@ -339,21 +328,17 @@ class JointEmbedding:
         A : np.ndarray
             The joint adjacency matrix.
         """
-
-        if (method == "dme") & (affinity != "cosine"):
-            raise NotImplementedError("Only cosine affinity is implemented for"
-                                       + "diffusion map embedding")
-        elif method in ["linear", "cauchy", "gauss"] and C is None:
-            raise ValueError("Kernel methods require a correspondence matrix")
-
         if C is None:
-            C = _affinity_matrix(R, M, method=affinity, scale=scale)
-        # else:
-        #     C = _affinity_matrix(C, method=affinity, scale=scale)
-        R = _affinity_matrix(R, method=affinity, scale=scale)
-        M = _affinity_matrix(M, method=affinity, scale=scale)
-        A = np.block([[R, C],
-                      [C.T, M]])
+            A = np.vstack([R, M])
+            A = _affinity_matrix(A, method=affinity, scale=scale)
+
+        else:
+            if affinity == "precomputed":
+                A = np.block([[R, C],
+                              [C.T, M]])
+            else:
+                A = np.block([[_affinity_matrix(R, method=affinity, scale=scale), C],
+                              [C.T, _affinity_matrix(M, method=affinity, scale=scale)]])
 
         return A
 
@@ -379,30 +364,36 @@ class JointEmbedding:
 
         independent_reference -= independent_reference.mean(axis=0)
         joint_reference -= joint_reference.mean(axis=0)
-        embedding -= - embedding.mean(axis=0)
+        embedding -= embedding.mean(axis=0)
+
+        independent_reference /= np.linalg.norm(independent_reference)
+        joint_reference /= np.linalg.norm(joint_reference)
+        embedding /= np.linalg.norm(embedding)
 
         s = 1
         if method == "sign_flip":
             to_flip = vector_wise_corr(embedding.copy(), independent_reference.copy()) < 0
             R = np.diag([-1 if i else 1 for i in to_flip])
+
         elif method == "rotation":
-            independent_reference /= np.linalg.norm(independent_reference)
-            joint_reference /= np.linalg.norm(joint_reference)
-            embedding /= np.linalg.norm(embedding)
             R, _ = orthogonal_procrustes(joint_reference, independent_reference)
+
         elif method == "dot_product":
+            # raise NotImplementedError("Dot product rotation not implemented")
             R = np.dot(joint_reference.T, independent_reference)
+
         elif method == "procrustes":
-            independent_reference /= np.linalg.norm(independent_reference)
-            joint_reference /= np.linalg.norm(joint_reference)
-            embedding /= np.linalg.norm(embedding)
             R, s = orthogonal_procrustes(joint_reference, independent_reference)
+
         else:
             raise ValueError(f"Unknown alignment method: {self.alignment}")
 
-        print(method.upper(), "R.T @ R = I -->", np.allclose(np.dot(R.T, R), np.eye(R.shape[1]), atol=1e-5))
         joint_reference = np.dot(joint_reference, R) * s
         embedding = np.dot(embedding, R) * s
+
+        independent_reference /= np.linalg.norm(independent_reference)
+        joint_reference /= np.linalg.norm(joint_reference)
+        embedding /= np.linalg.norm(embedding)
 
         return embedding, joint_reference
     
