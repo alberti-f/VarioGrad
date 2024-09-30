@@ -437,7 +437,7 @@ def _random_walk_laplacian(A, alpha=0.5):
         The random walk Laplacian of A.
     """
 
-    if (A.shape[0] != A.shape[1]) or np.array_equal(A, A.T):
+    if (A.shape[0] != A.shape[1]) or not np.array_equal(A, A.T):
         raise ValueError("A must be a squared, symmetrical affinity matrix.")
 
     # Compute the normalized Laplacian
@@ -505,8 +505,8 @@ def _laplacian(A, normalized=True):
     L : np.ndarray
         Laplacian matrix of M.
     """
-    
-    if (A.shape[0] != A.shape[1]) or np.array_equal(A, A.T):
+
+    if (A.shape[0] != A.shape[1]) or not np.array_equal(A, A.T):
         raise ValueError("A must be a squared, symmetrical affinity matrix.")
 
     # Calculate degree
