@@ -21,11 +21,11 @@ run_analyses.sh
 # Ignore subject pairs file
 subject_pairs.txt
 
-# Ignor logs
+# Ignore logs
 logs*/
 errs*/
 *.out
 *.err
 
 # Ignore package info
-*/*.egg-info/*
+src/*.egg-info/*
