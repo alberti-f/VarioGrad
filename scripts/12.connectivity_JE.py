@@ -1,20 +1,22 @@
-from variograd_utils import *
+import sys
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 import nibabel as nib
-import sys
+from variograd_utils.core_utils import dataset, subject
+from variograd_utils.brain_utils import vertex_info_10k
+from variograd_utils.embed_utils import JointEmbedding
 
 
 idx = int(sys.argv[1])-1
 data = dataset()
-id = data.subj_list[idx]
-subj = subject(id)
+ID = data.subj_list[idx]
+subj = subject(ID)
 cortex = np.hstack([vertex_info_10k.grayl, vertex_info_10k.grayr + vertex_info_10k.num_meshl])
 threshold = 95
 alpha = 0.5
 diffusion_time = 1
 
-print(f"Processing subject {id}")
+print(f"Processing subject {ID}")
 
 # Loand and threshold group average FC matrix
 W = np.load(data.outpath(f"{data.id}.REST_FC.10k_fs_LR.npy")).astype("float32")[:, cortex][cortex, :]
@@ -28,7 +30,7 @@ M[M < 0] = 0
 M[M < np.percentile(M, threshold, axis=0)] = 0
 
 if np.any(np.isnan(M)) or np.any(np.isnan(W)):
-    raise ValueError(f"NaN values in FC matrices. Subject {id} not processed.")
+    raise ValueError(f"NaN values in FC matrices. Subject {ID} not processed.")
 
 # Compute adjacency matrices
 C = cosine_similarity(M.T, W.T)
@@ -51,4 +53,4 @@ embedding = joint_embedding(M, W, C=C, n_components=10, method="diffusion", meth
 # Save embedding
 np.save(subj.outpath(f"{subj.id}.REST_FC_embedding.npy"), embedding)
 
-print(f"\n\nSubject {id} embedding saved to {subj.outpath(f'{subj.id}.REST_FC_embedding.npy')}")
+print(f"\n\nSubject {ID} embedding saved to {subj.outpath(f'{subj.id}.REST_FC_embedding.npy')}")
