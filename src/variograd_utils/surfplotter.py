@@ -55,11 +55,12 @@ class SurfPlotter:
         Calculate the rotation parameters.
     """
 
-    def __init__(self, lh_surf=None, rh_surf=None, views=["lateral", "medial"], layout="grid"):
+    def __init__(self, lh_surf=None, rh_surf=None, views=["lateral", "medial"], layout="grid", zoom=1):
         self.lh_surf = lh_surf
         self.rh_surf = rh_surf
         self.views = views if isinstance(views, list) else [views]
         self.layout = layout
+        self.zoom = zoom
         self.surf_dict = self._load_surfs(lh_surf=self.lh_surf, rh_surf=self.rh_surf)
 
 
@@ -105,10 +106,10 @@ class SurfPlotter:
 
             v_offset = 0 if self.layout=="grid" else v_offset
 
-            for view in self.views:  
-                scaling = 1
+            for view in self.views:
+                scaling = self.zoom
                 traslation = self._traslation_params(hemi, v_offset, h_offset, padding)
-                rotation = self._rotation_params(hemi, view) if isinstance(view, str) else view
+                rotation = self._rotation_params(hemi, view) #if isinstance(view, str) else view
                 rotation = self._rotation_matrix(rotation, scaling)
                 transformed_pts = self._apply_transform(surf["pts"], rotation, traslation)
 
@@ -291,7 +292,7 @@ class SurfPlotter:
         return traslation_vector
 
 
-    def _rotation_matrix(self, rotation, scaling):           
+    def _rotation_matrix(self, rotation, scaling):
         """
         Calculate the transform matrix for rotation and scaling.
 
@@ -367,33 +368,38 @@ class SurfPlotter:
         rotation : array_like
             Rotation parameters.
         """
-
-        hemi_offset = 180 if hemi=="L" else 0
+        hemi_offset = -180 if hemi=="L" else 0
         direction = -1 if hemi=="L" else 1
-        get_angle = lambda x: (x + hemi_offset) * direction
+        z = -180 if view=="lateral" else 0
         if view == "lateral":
             x = 0
             y = 0
-            z = get_angle(0)
+            z = hemi_offset
         elif view == "medial":
             x = 0
             y = 0
-            z = get_angle(180)
+            z = hemi_offset + 180
         elif view == "posterior":
             x = 0
             y = 0
-            z = get_angle(-90)
+            z = hemi_offset + (90 * direction)
         elif view == "anterior":
             x = 0
             y = 0
-            z = get_angle(90)
+            z = hemi_offset - (90 * direction)
         elif view == "dorsal":
-            x = get_angle(90)
+            x = 90
             y = 0
-            z = 90
+            z = hemi_offset + (90 * direction)
         elif view == "ventral":
-            x = get_angle(90)
+            x = 90
             y = 0
-            z = -90
+            z = hemi_offset - (90 * direction)
+        elif isinstance(view, (list, tuple)):
+            x, y, z = view
+            y *= direction
+            z = hemi_offset + (direction * z)
+
+        
         return [x, y, z]
     
