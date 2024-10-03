@@ -55,16 +55,19 @@ class SurfPlotter:
         Calculate the rotation parameters.
     """
 
-    def __init__(self, lh_surf=None, rh_surf=None, views=["lateral", "medial"], layout="grid", zoom=1):
+    def __init__(self, lh_surf=None, rh_surf=None, padding=20,
+                 views=["lateral", "medial"], layout="grid", zoom=1):
         self.lh_surf = lh_surf
         self.rh_surf = rh_surf
         self.views = views if isinstance(views, list) else [views]
         self.layout = layout
         self.zoom = zoom
+        self.padding = padding
         self.surf_dict = self._load_surfs(lh_surf=self.lh_surf, rh_surf=self.rh_surf)
 
 
-    def plot_surfs(self, ax=None, lh_map=None, rh_map=None, cmap="viridis", padding=20):
+    def plot_surfs(self, ax=None, lh_map=None, rh_map=None,
+                   cmap="viridis", center=None, cbar=True):
         """
         Plot the data on the surface(s).
 
@@ -78,8 +81,6 @@ class SurfPlotter:
             Data to plot on the right hemisphere surface.
         cmap : str
             Colormap to use.
-        padding : int
-            Padding between the surfaces.
         
         Returns
         -------
@@ -108,29 +109,62 @@ class SurfPlotter:
 
             for view in self.views:
                 scaling = self.zoom
-                traslation = self._traslation_params(hemi, v_offset, h_offset, padding)
-                rotation = self._rotation_params(hemi, view) #if isinstance(view, str) else view
+                traslation = self._traslation_params(hemi, v_offset, h_offset)
+                rotation = self._rotation_params(hemi, view)
                 rotation = self._rotation_matrix(rotation, scaling)
                 transformed_pts = self._apply_transform(surf["pts"], rotation, traslation)
 
                 v_offset = transformed_pts.min(axis=0)[2]
                 h_offset = transformed_pts.max(axis=0)[1]
 
-                colors = cmap(maps[hemi] / maps[hemi].max())
-                poly3d = Poly3DCollection(transformed_pts[surf["trg"], :3], facecolors=colors, 
+                colors, norm = self._norm_data(maps[hemi], center=center)
+                poly3d = Poly3DCollection(transformed_pts[surf["trg"], :3], facecolors=cmap(colors), 
                                               edgecolor="none", alpha=1, antialiased=False,
                                               shade=True, lightsource=lsource)
-                ax.add_collection3d(poly3d)
+                p = ax.add_collection3d(poly3d)
 
                 x_lims, y_lims, z_lims = self._update_axlim(ax, transformed_pts)
 
-            ax.set_xlim(x_lims)
-            ax.set_ylim(y_lims)
-            ax.set_zlim(z_lims)
-            ax.set_aspect("equal")
-            ax.set_axis_off()
+        ax.set_xlim(x_lims)
+        ax.set_ylim(y_lims)
+        ax.set_zlim(z_lims)
+        ax.set_aspect("equal")
+        ax.set_axis_off()
+        if cbar:
+            plt.colorbar(plt.cm.ScalarMappable(norm=norm, cmap=cmap), ax=ax)
 
         return ax
+
+
+    def _norm_data(self, data, center=None):
+        """
+        Normalize the data to map the colors.
+
+        Parameters
+        ----------
+        data : array_like
+            Data to normalize.
+        center : float
+            Center of the colormap.
+        
+        Returns
+        -------
+        data : array_like
+            Normalized data.
+        norm : matplotlib.colors.Normalize
+            Normalize object.
+        """
+
+        if center is None:
+            vmin = data.min()
+            vmax = data.max()
+
+        else:
+            vmax = np.abs(data - center).max()
+            vmin = - vmax
+        norm = plt.Normalize(vmin=vmin, vmax=vmax)
+
+        return norm(data), norm
 
 
     def _triangle_map(self, data, hemi):
@@ -250,7 +284,7 @@ class SurfPlotter:
         return transformed[:, :3]
 
 
-    def _traslation_params(self, hemi, v_offset=0, h_offset=0, padding=0):
+    def _traslation_params(self, hemi, v_offset=0, h_offset=0):
         """
         Calculate the translation parameters.
 
@@ -262,8 +296,6 @@ class SurfPlotter:
             Vertical offset.
         h_offset : int
             Horizontal offset.
-        padding : int
-            Padding between the surfaces.
         
         Returns
         -------
@@ -272,13 +304,13 @@ class SurfPlotter:
         """
 
         n_surfs = sum([self.lh_surf is not None, self.rh_surf is not None])
-        h_offset = h_offset + padding
-        v_offset = v_offset - padding
+        h_offset = h_offset + self.padding
+        v_offset = v_offset - self.padding
 
         if self.layout=="grid":
             if n_surfs==2:
                 h_offset = self.surf_dict["L"]["pts"].ptp(axis=0)[1]
-                h_offset += h_offset/10 + padding
+                h_offset += h_offset/10 + self.padding
                 traslation_vector = [0, 0, v_offset] if hemi=="L" else [0, h_offset, v_offset]
             else:
                 traslation_vector = [0, 0, v_offset]
