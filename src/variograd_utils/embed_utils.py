@@ -128,14 +128,18 @@ class JointEmbedding:
         M = np.array(M, copy=self.copy)
         if C is not None:
             C = np.array(C, copy=self.copy)
+        print("Data copyed")#########################################################################################
 
         A = self._joint_adjacency_matrix(M, R, C=C, affinity=affinity, scale=scale)
+        print("Adjaciency computed")#########################################################################################
 
         method_kwargs = {} if method_kwargs is None else method_kwargs
         embedding_function = diffusion_map_embedding if self.method == "dme" else laplacian_eigenmap
         embedding, vectors, lambdas = embedding_function(A, n_components=self.n_components,
                                                             random_state=self.random_state,
                                                             **method_kwargs)
+        print("Emdedding computed")#########################################################################################
+
         self.vectors = vectors
         self.lambdas = lambdas
         embedding_R = embedding[:n]
@@ -146,9 +150,13 @@ class JointEmbedding:
             embedding_R_ind, _, _ = embedding_function(A, n_components=self.n_components,
                                                        random_state=self.random_state,
                                                        **method_kwargs)
+            print("Reference embedded")######################################################################################
+
             embedding_M, embedding_R = self._align_embeddings(embedding_M, embedding_R,
                                                               embedding_R_ind, method=self.alignment)
             self.independent_ref = embedding_R_ind
+            print("Data aligned")#########################################################################################
+
 
         return embedding_M, embedding_R
 
@@ -186,7 +194,9 @@ class JointEmbedding:
 
         if C is None:
             A = np.vstack([R, M])
+            print("Stacked data:", A.shape)##################################################################################
             A = _affinity_matrix(A, method=affinity, scale=scale)
+            print("Stacked adjaciency computed")##############################################################################
 
         else:
             if affinity == "precomputed":
@@ -290,7 +300,10 @@ def _affinity_matrix(M, method="cosine", scale=None):
     """
 
     if method == "cosine":
+        print("Using method cosine")#########################################################################################
         A = cosine_similarity(M)
+        print("Used method cosine")#########################################################################################
+
 
     elif method == "correlation":
         A = np.corrcoef(M)
@@ -371,10 +384,14 @@ def diffusion_map_embedding(A, n_components=2, alpha=0.5, diffusion_time=1, rand
         A[A<0] = 0
 
     L = _random_walk_laplacian(A, alpha=alpha)
+    print("Random walk computed")#########################################################################################
+
 
     embedding, vectors, lambdas = _diffusion_map(L, n_components=n_components,
                                                            diffusion_time=diffusion_time,
                                                            random_state=random_state)
+    print("Diffusion map computed")#########################################################################################
+
 
     return embedding, vectors, lambdas
 
@@ -404,6 +421,8 @@ def _diffusion_map(L, n_components=2, diffusion_time=1, random_state=None):
     embedding = TruncatedSVD(n_components=n_components,
                              random_state=random_state
                              ).fit(L)
+    print("SVD computed")#########################################################################################
+
     vectors = embedding.components_.T
     lambdas = embedding.singular_values_
     if np.any(vectors[:, 0] == 0):
@@ -411,8 +430,11 @@ def _diffusion_map(L, n_components=2, diffusion_time=1, random_state=None):
         vectors += 1e-16
 
     psi = vectors / np.tile(vectors[:, 0], (vectors.shape[1], 1)).T
+    print("Psi computed")#########################################################################################
     lambdas[1:] = np.power(lambdas[1:], diffusion_time)
+    print("Lambda power computed")#########################################################################################
     embedding = psi[:, 1:n_components] @ np.diag(lambdas[1:n_components], 0)
+    print("Psi@lambda computed")#########################################################################################
     lambdas = lambdas[1:]
     vectors = vectors[:, 1:]
 
