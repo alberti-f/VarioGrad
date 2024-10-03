@@ -3,7 +3,7 @@ import numpy as np
 from variograd_utils.core_utils import dataset, subject, npz_update
 from variograd_utils.brain_utils import vertex_info_10k
 
-n_components = 10
+n_components = 20
 data = dataset()
 
 
@@ -13,6 +13,7 @@ zeroarrayr = np.zeros([data.N, vertex_info_10k.grayr.size, n_components])
 
 
 # add subject embeddings to the group dictionary
+print("Building group archive of embeddings:")
 embeddings_l = {}
 embeddings_r = {}
 for i, ID in enumerate(data.subj_list):
@@ -32,9 +33,13 @@ for i, ID in enumerate(data.subj_list):
             embeddings_r[key] = zeroarrayr.copy()
         embeddings_r[key][i] = value
 
+    print(f"\tAdded subject {i+1} of {data.N}")
+    
+
 # save group embeddings
 npz_update(data.outpath("All.L.embeddings.npz"), embeddings_l)
 npz_update(data.outpath("All.R.embeddings.npz"), embeddings_r)
+print("\nArchives saved")
 
 
 if os.path.exists(subject(ID).outpath(f"{ID}.L.embeddings.npz")) and os.path.exists(subject(ID).outpath(f"{ID}.R.embeddings.npz")):
@@ -42,4 +47,4 @@ if os.path.exists(subject(ID).outpath(f"{ID}.L.embeddings.npz")) and os.path.exi
         os.remove(subject(ID).outpath(f"{ID}.L.embeddings.npz"))
         os.remove(subject(ID).outpath(f"{ID}.R.embeddings.npz"))
 
-print("Removed subject embeddings")
+print("\nSubject embeddings removed")
