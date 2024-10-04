@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import LightSource
 import numpy as np
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
+from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
 
 class SurfPlotter:
@@ -55,8 +56,7 @@ class SurfPlotter:
         Calculate the rotation parameters.
     """
 
-    def __init__(self, lh_surf=None, rh_surf=None, padding=20,
-                 views=["lateral", "medial"], layout="grid", zoom=1):
+    def __init__(self, lh_surf=None, rh_surf=None, views=["lateral", "medial"], layout="grid", zoom=1, padding=20):
         self.lh_surf = lh_surf
         self.rh_surf = rh_surf
         self.views = views if isinstance(views, list) else [views]
@@ -90,10 +90,9 @@ class SurfPlotter:
 
         if ax is None:
             _, ax = plt.subplots(1,1, subplot_kw={"projection": "3d"})
-        ax.view_init(0, 0)
-
         cmap = plt.get_cmap(cmap)
         lsource = LightSource(azdeg=0, altdeg=90)
+
         maps = dict(zip(["L", "R"],
                         [self._triangle_map(lh_map, "L"), 
                          self._triangle_map(rh_map, "R")]))
@@ -121,39 +120,35 @@ class SurfPlotter:
                 poly3d = Poly3DCollection(transformed_pts[surf["trg"], :3], facecolors=cmap(colors), 
                                               edgecolor="none", alpha=1, antialiased=False,
                                               shade=True, lightsource=lsource)
-                p = ax.add_collection3d(poly3d)
+                ax.add_collection3d(poly3d)
 
                 x_lims, y_lims, z_lims = self._update_axlim(ax, transformed_pts)
 
+        self._refine_axis(ax, x_lims, y_lims, z_lims, cbar, cmap, norm)
+
+        return ax
+
+
+    def _refine_axis(self, ax, x_lims, y_lims, z_lims, cbar, cmap, norm):
+
+        ax.view_init(0, 0)
         ax.set_xlim(x_lims)
         ax.set_ylim(y_lims)
         ax.set_zlim(z_lims)
         ax.set_aspect("equal")
         ax.set_axis_off()
-        if cbar:
-            plt.colorbar(plt.cm.ScalarMappable(norm=norm, cmap=cmap), ax=ax)
 
-        return ax
+        if cbar:
+            if self.layout == "row":
+                h = 25
+            else:
+                h = len(self.views) * 25 if len(self.views) <= 3 else 75
+
+            cax = inset_axes(ax, height=f"{h}%", width="3%", loc="center right")
+            plt.colorbar(plt.cm.ScalarMappable(norm=norm, cmap=cmap), cax=cax)
 
 
     def _norm_data(self, data, center=None):
-        """
-        Normalize the data to map the colors.
-
-        Parameters
-        ----------
-        data : array_like
-            Data to normalize.
-        center : float
-            Center of the colormap.
-        
-        Returns
-        -------
-        data : array_like
-            Normalized data.
-        norm : matplotlib.colors.Normalize
-            Normalize object.
-        """
 
         if center is None:
             vmin = data.min()
@@ -162,6 +157,7 @@ class SurfPlotter:
         else:
             vmax = np.abs(data - center).max()
             vmin = - vmax
+
         norm = plt.Normalize(vmin=vmin, vmax=vmax)
 
         return norm(data), norm
@@ -431,7 +427,9 @@ class SurfPlotter:
             x, y, z = view
             y *= direction
             z = hemi_offset + (direction * z)
+        else:
+            raise ValueError("Unknown view.")
 
-        
+
         return [x, y, z]
     
