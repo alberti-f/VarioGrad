@@ -8,7 +8,7 @@ from variograd_utils.brain_utils import vertex_info_10k
 from variograd_utils.embed_utils import JointEmbedding
 
 
-idx = int(sys.argv[1])-1
+idx = 1 #int(sys.argv[1])-1
 data = dataset()
 ID = data.subj_list[idx]
 subj = subject(ID)
@@ -16,7 +16,7 @@ cortex = np.hstack([vertex_info_10k.grayl, vertex_info_10k.grayr + vertex_info_1
 threshold = 95
 n_components = 20
 alpha = 0.5
-diffusion_time = 1
+diffusion_time = 0
 
 print(f"Processing subject {ID}")
 
