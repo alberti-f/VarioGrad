@@ -3,7 +3,7 @@ from itertools import product
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 import nibabel as nib
-from variograd_utils.core_utils import dataset, subject
+from variograd_utils.core_utils import dataset, subject, npz_update
 from variograd_utils.brain_utils import vertex_info_10k
 from variograd_utils.embed_utils import JointEmbedding
 
