@@ -65,10 +65,10 @@ for key, kwargs in kwarg_dict.items():
     print(f"\t\N{GREEK SMALL LETTER ALPHA}={kwargs['alpha']} t={kwargs['diffusion_time']} :\t done")
 
 # Save outut
-filename = subj.outpath(f'{ID}.{h}.FC_embeddings.npz')
+filename = subj.outpath(f'{ID}.FC_embeddings.npz')
 npz_update(filename,  embedding_dict)
 print(f"Subject embeddings saved in archive {filename} \n")
 
-filename = subj.outpath(f'{ID}.{h}.FC_embeddings_refs.npz')
+filename = subj.outpath(f'{ID}.FC_embeddings_refs.npz')
 npz_update(filename,  reference_dict)
 print(f"Reference embeddings saved in archive {filename} \n")
