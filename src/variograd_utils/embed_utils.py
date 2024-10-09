@@ -5,8 +5,6 @@ from scipy.linalg import orthogonal_procrustes
 from sklearn.metrics.pairwise import cosine_similarity, euclidean_distances
 from sklearn.decomposition import TruncatedSVD
 from variograd_utils.core_utils import vector_wise_corr
-import psutil#########################################################################################
-
 
 class JointEmbedding:
     """
@@ -119,7 +117,6 @@ class JointEmbedding:
         ValueError
             If the affinity is "precomputed" and C is not specified.
         """
-        process = psutil.Process()################################################################################v#####
 
         if (affinity == "precomputed") & (C is None):
             raise ValueError("Precomputed affinity assumes M and R are already adjaciency matrices,"
@@ -130,17 +127,14 @@ class JointEmbedding:
         M = np.array(M, copy=self.copy)
         if C is not None:
             C = np.array(C, copy=self.copy)
-        print("Data copyed", process.memory_info().rss / (1024 ** 3))###################################################
 
         A = self._joint_adjacency_matrix(M, R, C=C, affinity=affinity, scale=scale)
-        print("Adjaciency computed", process.memory_info().rss / (1024 ** 3):.2f)######################################
 
         method_kwargs = {} if method_kwargs is None else method_kwargs
         embedding_function = diffusion_map_embedding if self.method == "dme" else laplacian_eigenmap
         embedding, vectors, lambdas = embedding_function(A, n_components=self.n_components,
                                                             random_state=self.random_state,
                                                             **method_kwargs)
-        print("Emdedding computed", process.memory_info().rss / (1024 ** 3))#############################################
 
         self.vectors = vectors
         self.lambdas = lambdas
@@ -152,12 +146,10 @@ class JointEmbedding:
             embedding_R_ind, _, _ = embedding_function(A, n_components=self.n_components,
                                                        random_state=self.random_state,
                                                        **method_kwargs)
-            print("Reference embedded", process.memory_info().rss / (1024 ** 3))#########################################
 
             embedding_M, embedding_R = self._align_embeddings(embedding_M, embedding_R,
                                                               embedding_R_ind, method=self.alignment)
             self.independent_ref = embedding_R_ind
-            print("Data aligned", process.memory_info().rss / (1024 ** 3))#########################################
 
 
         return embedding_M, embedding_R
@@ -196,16 +188,12 @@ class JointEmbedding:
 
         if C is None:
             A = np.vstack([R, M])
-            print("Stacking data", process.memory_info().rss / (1024 ** 3))#####################################
             A = _affinity_matrix(A, method=affinity, scale=scale)
-            print("Stacked adjaciency computed", process.memory_info().rss / (1024 ** 3))##########################
 
         else:
             if affinity == "precomputed":
-                print("Blocking data:", process.memory_info().rss / (1024 ** 3))#####################################
                 A = np.block([[R, C],
                               [C.T, M]])
-                print("Precomputed adjaciency computed", process.memory_info().rss / (1024 ** 3))##########################
             else:
                 A = np.block([[_affinity_matrix(R, method=affinity, scale=scale), C],
                               [C.T, _affinity_matrix(M, method=affinity, scale=scale)]])
@@ -303,11 +291,9 @@ def _affinity_matrix(M, method="cosine", scale=None):
         The affinity matrix
     """
 
-    if method == "cosine":
-        print("Using method cosine:", M.shape, process.memory_info().rss / (1024 ** 3))###################################
-        A = cosine_similarity(M)
-        print("Used method cosine:", A.shape, process.memory_info().rss / (1024 ** 3)))##################################
 
+    if method == "cosine":
+        A = cosine_similarity(M)
 
     elif method == "correlation":
         A = np.corrcoef(M)
@@ -315,7 +301,7 @@ def _affinity_matrix(M, method="cosine", scale=None):
     elif method in {"linear", "cauchy", "gauss"}:
         A = euclidean_distances(M)
         A = kernelize(A, kernel=method, scale=scale)
-    
+
     else:
         raise ValueError("Unknown affinity method")
 
@@ -325,7 +311,7 @@ def _affinity_matrix(M, method="cosine", scale=None):
 def kernelize(A, kernel="linear", scale=None):
     """
     Apply kernel to a matrix A
-    
+
     Parameters
     ----------
     A : array-like
@@ -334,7 +320,7 @@ def kernelize(A, kernel="linear", scale=None):
         The kernel to apply. Options are "cauchy", "gauss", "linear"
     scale : float
         The scaling parameter for the kernel
-        
+
     Returns
     -------
     A : array-like
@@ -382,19 +368,16 @@ def diffusion_map_embedding(A, n_components=2, alpha=0.5, diffusion_time=1, rand
     self : JointEmbedding
         Fitted instance of JointEmbedding.
     """
-
+    
     if np.any(A < 0):
         warnings.warn("Negative values in the adjaciency matrix set to 0", RuntimeWarning)
         A[A<0] = 0
 
     L = _random_walk_laplacian(A, alpha=alpha)
-    print("Random walk computed", process.memory_info().rss / (1024 ** 3))#########################################
-
 
     embedding, vectors, lambdas = _diffusion_map(L, n_components=n_components,
                                                            diffusion_time=diffusion_time,
                                                            random_state=random_state)
-    print("Diffusion map computed", process.memory_info().rss / (1024 ** 3))######################################
 
     return embedding, vectors, lambdas
 
@@ -419,12 +402,11 @@ def _diffusion_map(L, n_components=2, diffusion_time=1, random_state=None):
     L : np.ndarray
         The reference Laplacian matrix.
     """
-
+    
     n_components = n_components + 1
     embedding = TruncatedSVD(n_components=n_components,
                              random_state=random_state
                              ).fit(L)
-    print("SVD computed", process.memory_info().rss / (1024 ** 3))##########################################
 
     vectors = embedding.components_.T
     lambdas = embedding.singular_values_
@@ -433,11 +415,8 @@ def _diffusion_map(L, n_components=2, diffusion_time=1, random_state=None):
         vectors += 1e-16
 
     psi = vectors / np.tile(vectors[:, 0], (vectors.shape[1], 1)).T
-    print("Psi computed", process.memory_info().rss / (1024 ** 3))########################
     lambdas[1:] = np.power(lambdas[1:], diffusion_time)
-    print("Lambda power computed", process.memory_info().rss / (1024 ** 3))#######################################
     embedding = psi[:, 1:n_components] @ np.diag(lambdas[1:n_components], 0)
-    print("Psi@lambda computed", process.memory_info().rss / (1024 ** 3))######################################
     lambdas = lambdas[1:]
     vectors = vectors[:, 1:]
 
