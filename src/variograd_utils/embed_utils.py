@@ -6,8 +6,62 @@ from sklearn.metrics.pairwise import cosine_similarity, euclidean_distances
 from sklearn.decomposition import TruncatedSVD
 from variograd_utils.core_utils import vector_wise_corr
 
-
 class JointEmbedding:
+    """
+    JointEmbedding class for computing the joint embedding of two matrices.
+
+    Parameters:
+    ----------
+    method : str, optional
+        The embedding method to use. Options are:
+        - "dme": diffusion map embedding (default)
+        - "le": Laplacian eigenmap
+    n_components : int, optional
+        Number of components to compute (default=2).
+    alignment : str, optional
+        The alignment method to use:
+        - "procrustes": orthogonal Procrustes rotation with scaling.
+        - "rotation": orthogonal Procrustes rotation (default)
+        - "sign_flip": multiply the embedding dimension by -1 if the correlation with
+            the corresponding dimension in the reference is negative.
+        - "dot_product": align the embedding using the dot product of the joint reference
+            and independent reference embeddings.
+    random_state : int, optional
+        Random seed of the SVDs.
+    copy : bool, optional
+        Whether to copy the input matrices (default=True).
+
+    Attributes:
+    ----------
+    method : str
+        The embedding method to use.
+    n_components : int
+        Number of components to compute.
+    alignment : str
+        The alignment method to use.
+    random_state : int
+        Random seed of the SVDs.
+    copy : bool
+        Whether to copy the input matrices.
+    vectors : np.ndarray
+        The eigenvectors of the embedding.
+    lambdas : np.ndarray
+        The eigenvalues of the embedding.
+    independent_ref : np.ndarray
+        The independent reference embedding used for alignment.
+    
+    Methods:
+    --------
+    fit_transform(M, R, C=None, affinity="cosine", scale=None, method_kwargs=None)
+        Compute the joint embedding of M and R using the specified method.
+    _joint_adjacency_matrix(M, R, C=None, affinity="cosine", scale=None)
+        Computes the joint adjacency matrix.
+    _align_embeddings(embedding, joint_reference, independent_reference, method="rotation")
+        Align the joint embedding with the independently computed reference embedding.
+    _affinity_matrix(M, method="cosine", scale=None)
+        Compute the joint affinity matrix of the input data.
+    kernelize(A, kernel="linear", scale=None)
+    """
     
     def __init__(self, method="dme", n_components=2, alignment=None,
                  random_state=None, copy=True):
@@ -57,6 +111,11 @@ class JointEmbedding:
             The joint embedding of M.
         embedding_R : np.ndarray
             The joint embedding of R.
+        
+        Raises:
+        -------
+        ValueError
+            If the affinity is "precomputed" and C is not specified.
         """
 
         if (affinity == "precomputed") & (C is None):
@@ -76,19 +135,22 @@ class JointEmbedding:
         embedding, vectors, lambdas = embedding_function(A, n_components=self.n_components,
                                                             random_state=self.random_state,
                                                             **method_kwargs)
+
         self.vectors = vectors
         self.lambdas = lambdas
         embedding_R = embedding[:n]
         embedding_M = embedding[n:]
 
         if self.alignment is not None:
-            A = _affinity_matrix(R, method=affinity, scale=scale) if self.alignment != "precomputed" else R
+            A = _affinity_matrix(R, method=affinity, scale=scale) if affinity != "precomputed" else R
             embedding_R_ind, _, _ = embedding_function(A, n_components=self.n_components,
                                                        random_state=self.random_state,
                                                        **method_kwargs)
+
             embedding_M, embedding_R = self._align_embeddings(embedding_M, embedding_R,
                                                               embedding_R_ind, method=self.alignment)
             self.independent_ref = embedding_R_ind
+
 
         return embedding_M, embedding_R
 
@@ -229,6 +291,7 @@ def _affinity_matrix(M, method="cosine", scale=None):
         The affinity matrix
     """
 
+
     if method == "cosine":
         A = cosine_similarity(M)
 
@@ -238,7 +301,7 @@ def _affinity_matrix(M, method="cosine", scale=None):
     elif method in {"linear", "cauchy", "gauss"}:
         A = euclidean_distances(M)
         A = kernelize(A, kernel=method, scale=scale)
-    
+
     else:
         raise ValueError("Unknown affinity method")
 
@@ -248,7 +311,7 @@ def _affinity_matrix(M, method="cosine", scale=None):
 def kernelize(A, kernel="linear", scale=None):
     """
     Apply kernel to a matrix A
-    
+
     Parameters
     ----------
     A : array-like
@@ -257,7 +320,7 @@ def kernelize(A, kernel="linear", scale=None):
         The kernel to apply. Options are "cauchy", "gauss", "linear"
     scale : float
         The scaling parameter for the kernel
-        
+
     Returns
     -------
     A : array-like
@@ -305,7 +368,7 @@ def diffusion_map_embedding(A, n_components=2, alpha=0.5, diffusion_time=1, rand
     self : JointEmbedding
         Fitted instance of JointEmbedding.
     """
-
+    
     if np.any(A < 0):
         warnings.warn("Negative values in the adjaciency matrix set to 0", RuntimeWarning)
         A[A<0] = 0
@@ -339,11 +402,12 @@ def _diffusion_map(L, n_components=2, diffusion_time=1, random_state=None):
     L : np.ndarray
         The reference Laplacian matrix.
     """
-
+    
     n_components = n_components + 1
     embedding = TruncatedSVD(n_components=n_components,
                              random_state=random_state
                              ).fit(L)
+
     vectors = embedding.components_.T
     lambdas = embedding.singular_values_
     if np.any(vectors[:, 0] == 0):
@@ -377,7 +441,7 @@ def _random_walk_laplacian(A, alpha=0.5):
         The random walk Laplacian of A.
     """
 
-    if (A.shape[0] != A.shape[1]) or np.array_equal(A, A.T):
+    if (A.shape[0] != A.shape[1]) or not np.array_equal(A, A.T):
         raise ValueError("A must be a squared, symmetrical affinity matrix.")
 
     # Compute the normalized Laplacian
@@ -445,18 +509,18 @@ def _laplacian(A, normalized=True):
     L : np.ndarray
         Laplacian matrix of M.
     """
-    
-    if (A.shape[0] != A.shape[1]) or np.array_equal(A, A.T):
+
+    if (A.shape[0] != A.shape[1]) or not np.array_equal(A, A.T):
         raise ValueError("A must be a squared, symmetrical affinity matrix.")
 
     # Calculate degree
-    D = np.sum(M, axis=1).reshape(-1, 1)
+    D = np.sum(A, axis=1).reshape(-1, 1)
 
     # Compute the Laplacian matrix
     if normalized:
-        L = -M / np.sqrt(D @ D.T)
+        L = -A / np.sqrt(D @ D.T)
 
     else:
-        L = np.diag(D.squeeze()) - M         
+        L = np.diag(D.squeeze()) - A         
 
     return L
