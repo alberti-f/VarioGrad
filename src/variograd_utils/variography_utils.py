@@ -1,6 +1,214 @@
 import numpy as np
 from variograd_utils.embed_utils import kernelize
 from scipy.spatial.distance import pdist, squareform
+from sklearn.metrics.pairwise import euclidean_distances
+
+
+class Variogram:
+    """ Variogram class"""
+    def __init__(self):
+        self.lag_pairs = None
+        self.exp_sill = None
+        self.exp_variogram = None
+        self.the_sill = None
+        self.the_variogram = None
+        self.valid_lags = None
+
+    def omndir_variogram(self, points, values, lags, overlap=0, min_pairs=0, weight=None, scale=None):
+        """
+        Calculate the empirical variogram for a set of points and values
+        
+        Parameters
+        ----------
+        points : array_like
+            The spatial coordinates of the points. NxM array of N points in M dimensions.
+        values : array_like
+            The values at each point. Nx1 array.
+        lags : array_like
+            The lags at which to calculate the variogram.
+        overlap : float
+            The overlap between bins.
+        
+        Returns
+        -------
+        variogram : array_like
+            The empirical variogram at each lag.
+        """
+        if points.ndim == 1:
+            points = points.reshape(-1, 1)
+    
+        if values.ndim == 1:
+            values = values.reshape(-1, 1)
+            
+        # Calculate the pairwise distances
+        dists = euclidean_distances(points)[np.triu_indices(points.shape[0])]
+        diffs = euclidean_distances(values)[np.triu_indices(values.shape[0])]
+    
+        # Calculate the variogram
+        if not np.allclose(np.diff(lags), lags[1] - lags[0], atol=1e-16):
+            raise ValueError("Lags must be placed at regular intervals.")
+
+        # Define lag cheracteristics
+        lag_step = lags[1] - lags[0]
+        lag_tolerance = (lag_step * (1 + overlap)) / 2
+
+        # Compute experimental variogram
+        self.lag_pairs = np.zeros(len(lags))
+        self.variogram = np.full(len(lags), np.nan)
+        for lag_i, lag in enumerate(lags):
+            mask = _lag_mask(dists, lag, lag_tolerance=lag_tolerance)
+            diffs_lag = diffs[mask]
+            dists_lag = dists[mask]
+            self.lag_pairs[lag_i] = n_lag_pairs = mask.sum()
+
+            if n_lag_pairs < min_pairs or np.isnan(diffs_lag).all():
+                continue
+
+            else:
+                self.variogram[lag_i] = _lag_variogram(dists_lag, diffs_lag, lag, weight=weight, scale=scale)
+
+        self.valid_lags = np.sum(~np.isnan(self.variogram))
+
+
+
+def _lag_variogram(distances, differences, lag, weight=None, scale=None):
+    """
+    Calculate the empirical variogram at a given lag
+
+    Parameters
+    ----------
+    distances : array_like
+        The pairwise distances between points.
+    differences : array_like
+        The pairwise differences between values.
+    lag_edges : tuple
+        The edges of the lag bin.
+    weight : str
+        The weighting function to apply.
+        Options are "cauchy", "gauss", "log", "linear"
+    scale : float
+        The scaling factor for the weighting function.
+    
+    Returns
+    -------
+    gamma : float
+        The empirical variogram at the given lag.
+    """
+
+    N = distances.size
+
+    if weight is None:
+        weights = np.ones(N) / N
+    else:
+        weights = kernelize(np.abs(lag - distances), kernel=weight, scale=scale)
+        weights /= weights.sum()
+
+    diffs_sqrd = np.square(differences)
+    gamma = np.sum(weights * diffs_sqrd) / 2
+
+    return gamma
+
+
+def directional_variogram():
+    raise NotImplementedError("Directional variograms are not implemented yet.")
+    pass
+
+
+def _lag_mask(dists, lag, lag_tolerance=0):
+    return np.abs(dists - lag) <= lag_tolerance
+
+
+def bins_ol(xmin, xmax, nbins=10, overlap=0.25, inclusive=True):
+    """
+    Define equally spaced, overlapping bins.
+    
+    Parameters
+    ----------
+    xmin, xmax: float or scalar
+        the extremes of the span of values to bin
+    nbins : scalar
+        number of bins to divide the values in
+    overlap : float
+        the fraction of overlap between bins. Must be between -0.5 and 0.5 (Default=0.25)
+        Negative values will result in disjoint bins.
+    inclusive : bool
+        if True, the bounds of the bins will be the centers of the outer bins.
+        If False, the bounds will be the edges of the outer bins.
+    
+    Returns:
+    --------
+    lower:
+        the lower bound of every bin
+    upper:
+        the upper bound ov every bin
+
+    """
+    if overlap < -0.5 or overlap > 0.5:
+        raise ValueError("'overlap' should be between -0.5 and 0.5")
+
+    span = xmax - xmin
+
+    if inclusive:
+        step = span / nbins
+        center = np.arange(xmin, xmax + step, step)
+        half_window = step * 0.5  +  step * overlap
+
+        lower = center - half_window
+        upper = center + half_window
+
+    else:
+        ratio = nbins * (1 - 2 * overlap) + (nbins + 1) * overlap
+
+        window = span / ratio
+        step = window * (1 - overlap)
+
+        lower = np.arange(xmin, xmax, step)[:nbins]
+        upper = lower + window
+
+    return lower, upper
+
+
+def digitizedd(x, bins):
+    """Digitize data in an ND space.
+    
+    Parameters
+    ----------
+    x : array_like
+        The data to be digitized. MxN array of M points in N dimensions.
+    bins : array_like, tuple, or int
+        The bin edges along each dimension.
+        A list of N arrays, each with the bin edges for that dimension.
+        If a tuple, bins should cspecify the number of bins in each dimension (slower).
+        If an int, the same number of bins will be used for each dimension.      
+        Bins are defined as bins[i-1] <= x < bins[i].
+        A constant of 1e-6 is subtracted7added to the extremes to ensure all
+        the bins include all points in the data.
+    
+    Returns
+    -------
+    bin_idx : array_like
+        The bin index for each point in x. An array of size M.
+    """
+
+    # Get the number of dimensions
+    ndims = x.shape[1]
+
+    k = 1e-6
+    min_ax = x.min(axis=0) - k
+    max_ax = x.max(axis=0) + k
+    if isinstance(bins, tuple):
+        bins = [np.linspace(min_ax[idx], max_ax[idx], bins[idx] + 1) for idx in range(ndims)]
+    elif isinstance(bins, int):
+        bins = np.linspace(min_ax, max_ax, num=bins+1).T
+
+    # Digitize each dimension
+    digitized_indices = np.array([np.digitize(x[:, i], bins[i]) - 1 for i in range(ndims)])
+
+    # Calculate the total number of bins
+    nbins = [len(b) - 1 for b in bins]
+
+    # Create a unique index for each combination of bin indices
+    return np.ravel_multi_index(digitized_indices, nbins)
 
 
 def exponential_covariance(dists, correlation_length):
@@ -152,183 +360,6 @@ def generate_spatial_data(num_points, correlation_length, model="spherical",
     data += (1 - np.random.normal(0, 1, num_points)) * abs_noise
 
     return coordinates, data
-
-
-def bins_ol(xmin, xmax, nbins=10, overlap=0.25, inclusive=True):
-    """
-    Define equally spaced, overlapping bins.
-    
-    Parameters
-    ----------
-    xmin, xmax: float or scalar
-        the extremes of the span of values to bin
-    nbins : scalar
-        number of bins to divide the values in
-    overlap : float
-        the fraction of overlap between bins. Must be between -0.5 and 0.5 (Default=0.25)
-        Negative values will result in disjoint bins.
-    inclusive : bool
-        if True, the bounds of the bins will be the centers of the outer bins.
-        If False, the bounds will be the edges of the outer bins.
-    
-    Returns:
-    --------
-    lower:
-        the lower bound of every bin
-    upper:
-        the upper bound ov every bin
-
-    """
-    if overlap < -0.5 or overlap > 0.5:
-        raise ValueError("'overlap' should be between -0.5 and 0.5")
-
-    span = xmax - xmin
-
-    if inclusive:
-        step = span / nbins
-        center = np.arange(xmin, xmax + step, step)
-        half_window = step * 0.5  +  step * overlap
-
-        lower = center - half_window
-        upper = center + half_window
-
-    else:
-        ratio = nbins * (1 - 2 * overlap) + (nbins + 1) * overlap
-
-        window = span / ratio
-        step = window * (1 - overlap)
-
-        lower = np.arange(xmin, xmax, step)[:nbins]
-        upper = lower + window
-
-    return lower, upper
-
-
-def digitizedd(x, bins):
-    """Digitize data in an ND space.
-    
-    Parameters
-    ----------
-    x : array_like
-        The data to be digitized. MxN array of M points in N dimensions.
-    bins : array_like, tuple, or int
-        The bin edges along each dimension.
-        A list of N arrays, each with the bin edges for that dimension.
-        If a tuple, bins should cspecify the number of bins in each dimension (slower).
-        If an int, the same number of bins will be used for each dimension.      
-        Bins are defined as bins[i-1] <= x < bins[i].
-        A constant of 1e-6 is subtracted7added to the extremes to ensure all
-        the bins include all points in the data.
-    
-    Returns
-    -------
-    bin_idx : array_like
-        The bin index for each point in x. An array of size M.
-    """
-
-    # Get the number of dimensions
-    ndims = x.shape[1]
-
-    k = 1e-6
-    min_ax = x.min(axis=0) - k
-    max_ax = x.max(axis=0) + k
-    if isinstance(bins, tuple):
-        bins = [np.linspace(min_ax[idx], max_ax[idx], bins[idx] + 1) for idx in range(ndims)]
-    elif isinstance(bins, int):
-        bins = np.linspace(min_ax, max_ax, num=bins+1).T
-
-    # Digitize each dimension
-    digitized_indices = np.array([np.digitize(x[:, i], bins[i]) - 1 for i in range(ndims)])
-
-    # Calculate the total number of bins
-    nbins = [len(b) - 1 for b in bins]
-
-    # Create a unique index for each combination of bin indices
-    return np.ravel_multi_index(digitized_indices, nbins)
-
-
-def _variogram(distances, differences, lag, weight=None, scale=None):
-    """
-    Calculate the empirical variogram at a given lag
-
-    Parameters
-    ----------
-    distances : array_like
-        The pairwise distances between points.
-    differences : array_like
-        The pairwise differences between values.
-    lag_edges : tuple
-        The edges of the lag bin.
-    weight : str
-        The weighting function to apply.
-        Options are "cauchy", "gauss", "log", "linear"
-    scale : float
-        The scaling factor for the weighting function.
-    
-    Returns
-    -------
-    gamma : float
-        The empirical variogram at the given lag.
-    """
-
-    N = distances.size
-
-    if weight is None:
-        weights = np.ones(N) / N
-    else:
-        weights = kernelize(np.abs(lag - distances), kernel=weight, scale=scale)
-        weights /= weights.sum()
-
-    diffs_sqrd = np.square(differences)
-    gamma = np.sum(weights * diffs_sqrd) / 2
-
-    return gamma
-
-
-def nd_variogram(points, values, lags, overlap=0, min_pairs=10, weight=None, scale=None):
-    """
-    Calculate the empirical variogram for a set of points and values
-    
-    Parameters
-    ----------
-    points : array_like
-        The spatial coordinates of the points. NxM array of N points in M dimensions.
-    values : array_like
-        The values at each point. Nx1 array.
-    lags : array_like
-        The lags at which to calculate the variogram.
-    overlap : float
-        The overlap between bins.
-    
-    Returns
-    -------
-    variogram : array_like
-        The empirical variogram at each lag.
-    """
-
-    # Calculate the pairwise distances
-    rows, cols = np.triu_indices(points.shape[0], k=1)
-    dists = points[rows] - points[cols]
-    dists = np.sqrt(np.sum(dists**2, axis=1))
-    values = values.squeeze()
-    diffs = np.abs(values[rows] - values[cols])
-    diffs = np.sqrt(np.sum(diffs**2, axis=1)) if diffs.ndim > 1 else diffs
-
-    # Calculate the variogram
-    lag_step = np.diff(lags).mean()
-    lag_tolerance = (lag_step * (1 + overlap)) / 2
-
-    variogram = np.full(len(lags), np.nan)
-    for lag_i, lag in enumerate(lags):
-        mask = np.abs(dists - lag) <= lag_tolerance
-        diffs_lag = diffs[mask]
-        dists_lag = dists[mask]
-        if mask.sum() < min_pairs or np.isnan(diffs_lag).all():
-            continue
-        else:
-            variogram[lag_i] = _variogram(dists_lag, diffs_lag, lag, weight=weight, scale=scale)
-
-    return variogram
 
 
 
