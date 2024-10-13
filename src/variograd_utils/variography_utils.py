@@ -1,20 +1,22 @@
 import numpy as np
 from variograd_utils.embed_utils import kernelize
 from scipy.spatial.distance import pdist, squareform
+from scipy.optimize import curve_fit
 from sklearn.metrics.pairwise import euclidean_distances
+from sklearn.metrics import r2_score
 
 
 class Variogram:
     """ Variogram class"""
     def __init__(self):
+        self.lags = None
         self.lag_pairs = None
-        self.exp_sill = None
         self.exp_variogram = None
-        self.the_sill = None
         self.the_variogram = None
-        self.valid_lags = None
+        self.variogram_model = None
 
-    def omndir_variogram(self, points, values, lags, overlap=0, min_pairs=0, weight=None, scale=None):
+    def omndir_variogram(self, points, values, lags,
+                         overlap=0, min_pairs=0, weight=None, scale=None):
         """
         Calculate the empirical variogram for a set of points and values
         
@@ -41,8 +43,8 @@ class Variogram:
             values = values.reshape(-1, 1)
             
         # Calculate the pairwise distances
-        dists = euclidean_distances(points)[np.triu_indices(points.shape[0])]
-        diffs = euclidean_distances(values)[np.triu_indices(values.shape[0])]
+        dists = euclidean_distances(points)[np.triu_indices(points.shape[0], k=1)]
+        diffs = euclidean_distances(values)[np.triu_indices(values.shape[0], k=1)]
     
         # Calculate the variogram
         if not np.allclose(np.diff(lags), lags[1] - lags[0], atol=1e-16):
@@ -53,25 +55,61 @@ class Variogram:
         lag_tolerance = (lag_step * (1 + overlap)) / 2
 
         # Compute experimental variogram
-        self.lag_pairs = np.zeros(len(lags))
-        self.variogram = np.full(len(lags), np.nan)
+        self.lag_pairs = np.full(len(lags), np.nan)
+        self.exp_variogram = np.full(len(lags), np.nan)
         for lag_i, lag in enumerate(lags):
             mask = _lag_mask(dists, lag, lag_tolerance=lag_tolerance)
             diffs_lag = diffs[mask]
             dists_lag = dists[mask]
-            self.lag_pairs[lag_i] = n_lag_pairs = mask.sum()
+            n_lag_pairs = mask.sum()
 
             if n_lag_pairs < min_pairs or np.isnan(diffs_lag).all():
                 continue
 
             else:
-                self.variogram[lag_i] = _lag_variogram(dists_lag, diffs_lag, lag, weight=weight, scale=scale)
+                self.lag_pairs[lag_i] = n_lag_pairs
+                self.exp_variogram[lag_i] = _single_lag_variogram(dists_lag, diffs_lag, lag, weight=weight, scale=scale)
+        
+        self.lag_pairs = lags[~np.isnan(self.exp_variogram)]
+        self.lags = lags[~np.isnan(self.exp_variogram)]
+        self.exp_variogram = self.exp_variogram[~np.isnan(self.exp_variogram)]
 
-        self.valid_lags = np.sum(~np.isnan(self.variogram))
+
+    def directional_variogram():
+        raise NotImplementedError("Directional variograms are not implemented yet.")
 
 
+    def fit_variogram_model(self, model="spherical", curve_fit_kwargs={}):
+        '''
+        Fit a variogram model to the empirical variogram
+        '''
+    
+        variogram_models = {
+            "spherical": spherical,
+            "exponential": exponential,
+            "gaussian": gaussian,
+            "custom": model
+        }
 
-def _lag_variogram(distances, differences, lag, weight=None, scale=None):
+        if callable(model):
+            model = "custom"
+        elif isinstance(model, str) & (model not in variogram_models):
+            raise ValueError("`model` must be 'spherical', 'exponential', 'gaussian',"
+                             + "or a callable custom function")
+
+        (ngt, cont, rng), _= curve_fit(variogram_models[model], self.lags, self.exp_variogram, **curve_fit_kwargs)
+
+        self.the_variogram = variogram_models[model](self.lags, ngt, cont, rng)
+        self.variogram_model = {"model": model,
+                                "function": variogram_models[model],
+                                "nugget": ngt,
+                                "contribution": cont,
+                                "range": rng,
+                                "sill": ngt + cont,
+                                "r2": r2_score(self.exp_variogram, self.the_variogram)}
+
+        
+def _single_lag_variogram(distances, differences, lag, weight=None, scale=None):
     """
     Calculate the empirical variogram at a given lag
 
@@ -109,13 +147,40 @@ def _lag_variogram(distances, differences, lag, weight=None, scale=None):
     return gamma
 
 
-def directional_variogram():
-    raise NotImplementedError("Directional variograms are not implemented yet.")
-    pass
-
-
 def _lag_mask(dists, lag, lag_tolerance=0):
     return np.abs(dists - lag) <= lag_tolerance
+
+
+def spherical(x, nugget, contribution, rng):
+    '''
+    Spherical variogram model
+    '''
+    gamma = nugget + contribution * (1.5 * (x / rng) - 0.5 * (x / rng) ** 3)
+    gamma[x > rng] = nugget + contribution
+    return gamma
+
+
+def exponential(x, nugget, contribution, rng):
+    '''
+    Exponential variogram model
+    '''
+    gamma = nugget + contribution * (1 - np.exp(-3 * x / rng))
+    return gamma
+
+
+def gaussian(x, nugget, contribution, rng):
+    '''
+    Gaussian variogram model
+    '''
+    gamma = nugget + contribution * (1 - np.exp(-3 * (x / rng) ** 2))
+    return gamma
+
+
+def logistic(x, L, k, x0):
+    '''
+    Logistic variogram model
+    '''
+    return L / (1 + np.exp(-k * (x - x0)))
 
 
 def bins_ol(xmin, xmax, nbins=10, overlap=0.25, inclusive=True):
@@ -305,7 +370,7 @@ def generate_covariance_matrix(dists, model, correlation_length):
     return covar_function(dists, correlation_length)
 
 
-def generate_spatial_data(num_points, correlation_length, model="spherical",
+def generate_spatial_data(points, correlation_length, model="spherical",
                           cov_noise=0., abs_noise=0.):
     """Generate spatial data with controllable autocorrelation.
     
@@ -340,9 +405,18 @@ def generate_spatial_data(num_points, correlation_length, model="spherical",
     The data spans the range [0, 1].
     """
     # Generate random coordinates
-    x = np.random.uniform(0, 10, num_points)
-    y = np.random.uniform(0, 10, num_points)
-    coordinates = np.vstack((x, y)).T
+    if isinstance(points, (int, np.int32, np.int64)):
+        num_points = points
+        x = np.random.uniform(0, 10, num_points)
+        y = np.random.uniform(0, 10, num_points)
+        coordinates = np.vstack((x, y)).T
+
+    elif isinstance(points, np.ndarray) & (points.shape[1] == 2):
+        num_points = points.shape[0]
+        coordinates = points
+
+    else :
+        raise ValueError("`points` must be an integer or an Nx2 numpy array")
 
     # Calculate pairwise distances
     dists = squareform(pdist(coordinates))
@@ -359,7 +433,10 @@ def generate_spatial_data(num_points, correlation_length, model="spherical",
     data = np.random.multivariate_normal(mean, covariance_matrix + cov_noise * np.eye(num_points))
     data += (1 - np.random.normal(0, 1, num_points)) * abs_noise
 
-    return coordinates, data
+    if isinstance(points, (int, np.int32, np.int64)):
+        return coordinates, data
+    else:
+        return data
 
 
 
