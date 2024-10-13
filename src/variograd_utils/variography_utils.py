@@ -55,24 +55,20 @@ class Variogram:
         lag_tolerance = (lag_step * (1 + overlap)) / 2
 
         # Compute experimental variogram
+        self.lags = lags
         self.lag_pairs = np.full(len(lags), np.nan)
         self.exp_variogram = np.full(len(lags), np.nan)
         for lag_i, lag in enumerate(lags):
             mask = _lag_mask(dists, lag, lag_tolerance=lag_tolerance)
             diffs_lag = diffs[mask]
             dists_lag = dists[mask]
-            n_lag_pairs = mask.sum()
+            self.lag_pairs[lag_i] = mask.sum()
 
-            if n_lag_pairs < min_pairs or np.isnan(diffs_lag).all():
+            if self.lag_pairs[lag_i] < min_pairs or np.isnan(diffs_lag).all():
                 continue
 
             else:
-                self.lag_pairs[lag_i] = n_lag_pairs
                 self.exp_variogram[lag_i] = _single_lag_variogram(dists_lag, diffs_lag, lag, weight=weight, scale=scale)
-        
-        self.lag_pairs = lags[~np.isnan(self.exp_variogram)]
-        self.lags = lags[~np.isnan(self.exp_variogram)]
-        self.exp_variogram = self.exp_variogram[~np.isnan(self.exp_variogram)]
 
 
     def directional_variogram():
@@ -97,16 +93,18 @@ class Variogram:
             raise ValueError("`model` must be 'spherical', 'exponential', 'gaussian',"
                              + "or a callable custom function")
 
-        (ngt, cont, rng), _= curve_fit(variogram_models[model], self.lags, self.exp_variogram, **curve_fit_kwargs)
+        lags = self.lags[~np.isnan(self.exp_variogram)]
+        exp_variogram = self.exp_variogram[~np.isnan(self.exp_variogram)]
+        (ngt, cont, rng), _= curve_fit(variogram_models[model], lags, exp_variogram, **curve_fit_kwargs)
 
-        self.the_variogram = variogram_models[model](self.lags, ngt, cont, rng)
+        self.the_variogram = variogram_models[model](lags, ngt, cont, rng)
         self.variogram_model = {"model": model,
                                 "function": variogram_models[model],
                                 "nugget": ngt,
                                 "contribution": cont,
                                 "range": rng,
                                 "sill": ngt + cont,
-                                "r2": r2_score(self.exp_variogram, self.the_variogram)}
+                                "r2": r2_score(exp_variogram, self.the_variogram)}
 
         
 def _single_lag_variogram(distances, differences, lag, weight=None, scale=None):
