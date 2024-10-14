@@ -100,7 +100,7 @@ for h in hemispheres:
         results["lag_pairs"] = lag_pairs
 
         # Sve out results
-        if not os.path.exists(data.outpath("variograms"):
+        if not os.path.exists(data.outpath("variograms")):
             os.mkdir(data.outpath("variograms"))
         filename = f"variograms/{data.id}.{h}.variogram_{algorithm}.nd{ndim}_nl{nlags}_mxl{int(fract * 100)}.npy"
         npz_update(data.outpath(filename), results)
