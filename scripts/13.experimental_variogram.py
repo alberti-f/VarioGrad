@@ -1,106 +1,106 @@
-import numpy as np
-from variograd_utils import *
 import psutil
 import sys, os
+from itertools import product
+import numpy as np
+from sklearn.metrics.pairwise import euclidean_distances
+from variograd_utils.core_utils import dataset, subject, npz_update
+import variograd_utils.variography_utils as vu
+from variograd_utils.brain_utils import vertex_info_10k
 
-algorithm = str(sys.argv[1])
-dim = int(sys.argv[2])-1
-grd = int(sys.argv[3])-1
+# Iterable parameters
+alg_idx = int(sys.argv[1]) - 1
+algorithms = ["JE_cauchy50", "JE_cauchy100", "JE_cauchy150", "JE_cauchy200"]
+algorithms = [algorithms[alg_idx]]
+ndims = [3, 8, 15]
+nlagss = [20, 30]
+hemispheres = ["L", "R"]
+max_dist_fracts = [1, .50, .25]
+variogram_models = ["spherical", "exponential", "gaussian"]
 
-process = psutil.Process()
+# Fixed parameters
+grd = 0
+overlap = 0
+min_pairs = 30
+alpha_time = "a05_t1"
+detrend = False
 
-nbins = 20
-overlap = 0.
-min_pairs = 100
-
+# Create iterable parameter combinations
+parameters = product(algorithms, ndims, nlagss, max_dist_fracts)
 data =  dataset()
 
-row, col = np.triu_indices(data.N, k=1)
-
-for h in ["L", "R"]:
-
-    # Calculate embedded geometric distances
-    print(f"\nCalculating distances in embedded space")
-
-    LE =  data.load_embeddings(h, algorithm)[algorithm][:, :, dim].T
-    geo_dists = np.empty([LE.shape[0], row.size])
-    for v, vertex in enumerate(LE):
-        geo_dists[v] = abs(np.subtract(vertex[row], vertex[col], dtype="float32"))
-    
-    # Normalize distances within each vertex to [0, 1]
-    # geo_dists /= geo_dists.max(axis=1, keepdims=True)
-    
-    print("memory used:", process.memory_info().rss / 1e9)
-
-
-
-    # Calculate functional distances
-    print(f"\nCalculating distances in functional space")
-
+for h in hemispheres:
+    print("\nHemisphere:", h)
     hemi = slice(vertex_info_10k.grayl.size) if h == "L" else slice(vertex_info_10k.grayl.size, None)
-    gradients = np.vstack([np.load(subject(id).outpath(f"{id}.REST_FC_embedding.npy"))[hemi, grd] for id in data.subj_list], dtype="float32").T
+    
+    # Loading coordinates in geometric embedding
+    print(f"\n\tLoading coordinates in geometric embedding")
+    LE_all = data.load_embeddings(h, "JE")
 
-    # Normalize gradients to [0, 1] using maximum absolute value across all vertices and individuals
-    gradients /= np.abs(gradients).max()
+    # Loading coordinates in functional embedding
+    print(f"\n\tLoading coordinates in functional embedding")
+    load_gradient = lambda ID: np.load(subject(ID).outpath(f'{ID}.FC_embeddings.npz'))[alpha_time][hemi, grd]
+    gradients = np.vstack([load_gradient(ID) for ID in data.subj_list], dtype="float32").T
 
-    # Normalize gradients to [-1, 1] using min-max scaling witihn individuals
-    # gradients = 2 * (gradients - gradients.min(axis=0, keepdims=True)) / (gradients.max(axis=0, keepdims=True) - gradients.min(axis=0, keepdims=True)) - 1
+    for algorithm, ndim, nlags, fract in parameters:
+        dims = slice(None, ndim)
+        LE =  LE_all[algorithm][:, :, dims].transpose(1, 0, 2)
 
-    # Center gradients on local mean to reduce non-stationarity ############# 2DO: Replace with regression resduals
-    #  gradients -= gradients.mean(axis=1, keepdims=True) 
+        # Define lags
+        max_dist = fract * np.median([np.percentile(euclidean_distances(v), 90) for v in LE])
+        lags = np.linspace(0, max_dist, nlags)
 
-    # Normalize gradients to unit variance to set sill to 1
-    gradients /= gradients.std(axis=1, keepdims=True)
-
-    fun_dists = np.empty(geo_dists.shape)
-    for v, vertex in enumerate(gradients):
-        fun_dists[v] = abs(np.subtract(vertex[row], vertex[col], dtype="float32"))
-
-    print("memory used:", process.memory_info().rss / 1e9)
-
-
-
-    # Calculate experimental variograms 
-    print("\nCalculating vertex-wise variograms")
-    print(f"N bins: {nbins}, overlap: {overlap*100}%, min pairs: {min_pairs}\n")
-
-    bins = np.array(bins_ol(0, np.percentile(geo_dists, 90), nbins=nbins, overlap=overlap, inclusive=True)).T
-
-    variograd = np.empty([fun_dists.shape[0], bins.shape[0]])
-    lags = []
-    for bin, (lo, up) in enumerate(bins):
-
-        mask = np.logical_and(geo_dists >= lo, geo_dists <= up)
-        if mask.sum(axis=1).min() < min_pairs:
-            variograd = variograd[:, :bin]
-            break
+        # Preallocate arrays
+        exp_variograms = np.full([LE.shape[0], nlags], np.nan)
+        lag_pairs =  np.full([LE.shape[0], nlags], np.nan)
         
-        lags.append((lo + up) / 2)
+        results = {"exp_variogram": None,
+                   "lags": None,
+                   "lag_pairs": None,
+                   "spherical_model": np.full([LE.shape[0], 5], np.nan),
+                   "exponential_model": np.full([LE.shape[0], 5], np.nan),
+                   "gaussian_model": np.full([LE.shape[0], 5], np.nan)}
 
-        # Weighted distance bins
-        # mask = np.logical_and(mask, ~np.isnan(fun_dists))
-        # s = 0.25 * (bins[bin, 1] - bins[bin, 0])
-        # W = np.subtract(geo_dists, lags[bin], dtype="float32")
-        # W = np.exp(-0.5 * (W ** 2) / (s ** 2)) * mask #np.int32(mask)
-        # W = W / (2 * W.sum(axis=1, keepdims=True))
-        # variograd[:, bin] =  np.nansum(np.square(fun_dists) * W , axis=1) 
+        # Calculate vertex-wise experimental variograms
+        print("\n\tParameters:")
+        print(f"\talgorithm: {algorithm}, N dimensions: {ndim}")
+        print(f"\t max dist: {max_dist}, N lags: {nlags}, overlap: {overlap*100}%, min pairs: {min_pairs}\n")
+        for vtx, (gembd_vtx, fembd_vtx) in enumerate(zip(LE, gradients)):
         
-        # Simple distance bins
-        mask = np.logical_and(mask, ~np.isnan(fun_dists))
-        variograd[:, bin] =  np.nansum(np.square(fun_dists) * mask, axis=1) / (2 * mask.sum(axis=1))
+            if gembd_vtx.ndim == 1:
+                gembd_vtx = gembd_vtx.reshape(-1, 1)
+        
+            if fembd_vtx.ndim == 1:
+                fembd_vtx = fembd_vtx.reshape(-1, 1)
+        
+            VG = vu.Variogram()
+            VG.omndir_variogram(gembd_vtx.copy(), fembd_vtx.copy() / fembd_vtx.std(),
+                                lags, overlap=0, min_pairs=min_pairs)
+        
+            exp_variograms[vtx] = VG.exp_variogram
+            lag_pairs[vtx] = VG.lag_pairs
 
-        print(f"Bin {bin+1}\th={lags[bin]:.1E}\t\u03B3(h) = {variograd[:, bin].mean():.2f}({variograd[:, bin].std():.2f})")
-        print(f"\tbin=[{lo:.3f}, {up:.3f}]\tmin pairs={mask.sum(axis=1).min()}\tmax pairs={mask.sum(axis=1).max()}\tmean % pairs={mask.mean(axis=1).mean() * 100:.0f}\n")
+            # Fit variogram models
+            for model in variogram_models:
+                bounds = (0, [np.nanmax(VG.exp_variogram), 1, np.nanmax(VG.lags)])
+                p0 = [1e-16, 0.5 * np.nanmax(VG.exp_variogram), 0.5 * np.nanmax(VG.lags)]
+                curve_fit_kwargs = {"bounds": bounds, "p0": p0, "method": "trf", "maxfev": 6000}
+                try:
+                    VG.fit_variogram_model(model=model, curve_fit_kwargs=curve_fit_kwargs)
 
-    print(f"Bins used: {len(lags)}")
-    print("memory used:", process.memory_info().rss / 1e9)
+                    results[f"{model}_model"][vtx] = np.array([VG.variogram_model["nugget"],
+                                                               VG.variogram_model["contribution"],
+                                                               VG.variogram_model["range"],
+                                                               VG.variogram_model["sill"],
+                                                               VG.variogram_model["r2"]])
+                except:
+                    results[f"{model}_model"][vtx] = np.full(5, np.nan)
 
+        results["exp_variogram"] = exp_variograms
+        results["lags"] = lags
+        results["lag_pairs"] = lag_pairs
 
-    print("memory used:", process.memory_info().rss / 1e9)
-
-
-
-    if not os.path.exists(data.outpath(f"/variograms")):
-        os.mkdir(data.outpath(f"/variograms"))
-
-    np.save(data.outpath(f"variograms/variogram.{h}.{algorithm}.ax{dim}_G{grd}.npy"), variograd)
+        # Sve out results
+        if not os.path.exists(data.outpath("variograms"):
+            os.mkdir(data.outpath("variograms"))
+        filename = f"variograms/{data.id}.{h}.variogram_{algorithm}.nd{ndim}_nl{nlags}_mxl{int(fract * 100)}.npy"
+        npz_update(data.outpath(filename), results)
