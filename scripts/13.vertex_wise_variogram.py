@@ -102,5 +102,5 @@ for h in hemispheres:
         # Sve out results
         if not os.path.exists(data.outpath("variograms")):
             os.mkdir(data.outpath("variograms"))
-        filename = f"variograms/{data.id}.{h}.variogram_{algorithm}.nd{ndim}_nl{nlags}_mxl{int(fract * 100)}.npy"
+        filename = f"variograms/{data.id}.{h}.variogram_{algorithm}.nd{ndim}_nl{nlags}_mxl{int(fract * 100)}.npz"
         npz_update(data.outpath(filename), results)
