@@ -7,7 +7,36 @@ from sklearn.metrics import r2_score
 
 
 class Variogram:
-    """ Variogram class"""
+    """
+    Class for calculating empirical variograms and fitting variogram models.
+    
+    Parameters
+    ----------
+    None
+
+    Attributes
+    ----------
+    lags : array_like
+        The lags at which to calculate the variogram.
+    lag_pairs : array_like
+        The number of pairs at each lag.
+    exp_variogram : array_like
+        The empirical variogram at each lag.
+    the_variogram : array_like
+        The fitted variogram at each lag.   
+    variogram_model : dict
+        The parameters of the fitted variogram model.
+    
+    Methods
+    -------
+    omndir_variogram(points, values, lags, overlap=0, min_pairs=0, weight=None, scale=None)
+        Calculate the empirical omnidirectional variogram for a set of points and values.
+    directional_variogram()
+        Calculate the empirical directional variogram for a set of points and values.
+    fit_variogram_model(model="spherical", curve_fit_kwargs={})
+        Fit a variogram model to the empirical variogram.
+    """
+
     def __init__(self):
         self.lags = None
         self.lag_pairs = None
@@ -38,14 +67,14 @@ class Variogram:
         """
         if points.ndim == 1:
             points = points.reshape(-1, 1)
-    
+
         if values.ndim == 1:
             values = values.reshape(-1, 1)
-            
+
         # Calculate the pairwise distances
         dists = euclidean_distances(points)[np.triu_indices(points.shape[0], k=1)]
         diffs = euclidean_distances(values)[np.triu_indices(values.shape[0], k=1)]
-    
+
         # Calculate the variogram
         if not np.allclose(np.diff(lags), lags[1] - lags[0], atol=1e-16):
             raise ValueError("Lags must be placed at regular intervals.")
@@ -68,16 +97,41 @@ class Variogram:
                 continue
 
             else:
-                self.exp_variogram[lag_i] = _single_lag_variogram(dists_lag, diffs_lag, lag, weight=weight, scale=scale)
+                self.exp_variogram[lag_i] = _single_lag_variogram(dists_lag, diffs_lag, lag,
+                                                                  weight=weight, scale=scale)
 
 
-    def directional_variogram():
+    def directional_variogram(self):
+        """
+        Will calculate the empirical directional variogram for a set of points and values.
+        """
         raise NotImplementedError("Directional variograms are not implemented yet.")
 
 
     def fit_variogram_model(self, model="spherical", curve_fit_kwargs={}):
         '''
         Fit a variogram model to the empirical variogram
+
+        Parameters
+        ----------
+        model : str, callable
+            The variogram model to fit.
+            Predefined variogram functions are 'spherical', 'exponential', 'gaussian'.
+            It is alsp possible to pass a custom function with arguments:
+            - lags: array_like
+                The lags at which to calculate the variogram.
+            - nugget: float
+                The nugget effect.
+            - contribution: float
+                The contribution of the variogram.
+            - range: float
+                The range of the variogram.
+        curve_fit_kwargs : dict
+            Additional keyword arguments to pass to `scipy.optimize.curve_fit`.
+        
+        Returns
+        -------
+        self: Variogram object        
         '''
     
         variogram_models = {
@@ -95,7 +149,8 @@ class Variogram:
 
         lags = self.lags[~np.isnan(self.exp_variogram)]
         exp_variogram = self.exp_variogram[~np.isnan(self.exp_variogram)]
-        (ngt, cont, rng), _= curve_fit(variogram_models[model], lags, exp_variogram, **curve_fit_kwargs)
+        (ngt, cont, rng), _= curve_fit(variogram_models[model], lags,
+                                       exp_variogram, **curve_fit_kwargs)
 
         self.the_variogram = variogram_models[model](lags, ngt, cont, rng)
         self.variogram_model = {"model": model,
@@ -106,7 +161,7 @@ class Variogram:
                                 "sill": ngt + cont,
                                 "r2": r2_score(exp_variogram, self.the_variogram)}
 
-        
+
 def _single_lag_variogram(distances, differences, lag, weight=None, scale=None):
     """
     Calculate the empirical variogram at a given lag
@@ -146,6 +201,23 @@ def _single_lag_variogram(distances, differences, lag, weight=None, scale=None):
 
 
 def _lag_mask(dists, lag, lag_tolerance=0):
+    """
+    Helper to create a mask for the points within a given lag
+
+    Parameters:
+    -----------
+    dists : array_like
+        The pairwise distances between points.
+    lag : float
+        The lag to consider.
+    lag_tolerance : float
+        The tolerance for the lag.
+    
+    Returns:
+    --------
+    mask : array_like
+        A boolean array indexing the points within the given lag.
+    """
     return np.abs(dists - lag) <= lag_tolerance
 
 
