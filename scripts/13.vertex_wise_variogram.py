@@ -9,18 +9,18 @@ from variograd_utils.brain_utils import vertex_info_10k
 
 # Iterable parameters
 alg_idx = int(sys.argv[1]) - 1
-algorithms = ["JE_cauchy50", "JE_cauchy100", "JE_cauchy150", "JE_cauchy200"]
+algorithms = ["JE_cauchy50", "JE_cauchy100", "JE_cauchy150", "JE_cauchy200", "GCCA_r100", "JE_None50"]
 algorithms = [algorithms[alg_idx]]
 ndims = [3, 8, 15]
-nlagss = [20, 30]
+nlagss = [15, 20, 30]
 hemispheres = ["L", "R"]
 max_dist_fracts = [1, .50, .25]
 variogram_models = ["spherical", "exponential", "gaussian"]
 
 # Fixed parameters
 grd = 0
-overlap = 0
-min_pairs = 30
+overlap = 1
+min_pairs = 3
 alpha_time = "a05_t1"
 detrend = False
 
