@@ -9,7 +9,7 @@ from variograd_utils.brain_utils import left_cortex_data_10k, right_cortex_data_
 from variograd_utils.embed_utils import JointEmbedding
 
 
-idx = int(sys.argv[1])-1 ############################################################################################
+idx = int(sys.argv[1])-1 
 data = dataset()
 ID = data.subj_list[idx]
 subj = subject(ID)
