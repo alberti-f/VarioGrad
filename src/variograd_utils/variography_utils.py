@@ -2,7 +2,7 @@ import numpy as np
 from variograd_utils.embed_utils import kernelize
 from scipy.spatial.distance import pdist, squareform
 from scipy.optimize import curve_fit
-from sklearn.metrics.pairwise import euclidean_distances
+import sklearn.metrics.pairwise as pw
 from sklearn.metrics import r2_score
 
 
@@ -45,7 +45,8 @@ class Variogram:
         self.variogram_model = None
 
     def omndir_variogram(self, points, values, lags,
-                         overlap=0, min_pairs=0, weight=None, scale=None):
+                         overlap=0, min_pairs=0, weight=None, scale=None,
+                         metric="euclidean"):
         """
         Calculate the empirical variogram for a set of points and values
         
@@ -59,6 +60,9 @@ class Variogram:
             The lags at which to calculate the variogram.
         overlap : float
             The overlap between bins.
+        metric : str
+            metric used to compute distances in space and the difference between values.
+            Options are 'euclidean', 'manhattan', and 'cosine'.
         
         Returns
         -------
@@ -71,9 +75,11 @@ class Variogram:
         if values.ndim == 1:
             values = values.reshape(-1, 1)
 
+        dist_fun = getattr(pw, f"{metric}_distances")
+
         # Calculate the pairwise distances
-        dists = euclidean_distances(points)[np.triu_indices(points.shape[0], k=1)]
-        diffs = euclidean_distances(values)[np.triu_indices(values.shape[0], k=1)]
+        dists = dist_fun(points)[np.triu_indices(points.shape[0], k=1)]
+        diffs = dist_fun(values)[np.triu_indices(values.shape[0], k=1)]
 
         # Calculate the variogram
         if not np.allclose(np.diff(lags), lags[1] - lags[0], atol=1e-16):
