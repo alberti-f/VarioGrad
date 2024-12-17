@@ -56,7 +56,7 @@ for h in ["L", "R"]:
     
     je = JointEmbedding(method="dme",
                         n_components=n_components,
-                        alignment="rotation",
+                        alignment="sign_flip",
                         random_state=0,
                         copy=True)
     
@@ -69,10 +69,10 @@ for h in ["L", "R"]:
         print(f"\t\N{GREEK SMALL LETTER ALPHA}={kwargs['alpha']} t={kwargs['diffusion_time']} :\t done")
 
 # Save output
-filename = subj.outpath(f'{ID}.FC_embeddings_hemi.npz')
+filename = subj.outpath(f'{ID}.FC_embeddings_flip_hemi_refs.npz')
 npz_update(filename,  embedding_dict)
 print(f"Subject embeddings saved in archive {filename} \n")
 
-filename = subj.outpath(f'{ID}.FC_embeddings_refs_hemi.npz')
+filename = subj.outpath(f'{ID}.FC_embeddings_flip_hemi_refs.npz')
 npz_update(filename,  reference_dict)
 print(f"Reference embeddings saved in archive {filename} \n")
