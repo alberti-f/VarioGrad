@@ -29,3 +29,8 @@ errs*/
 
 # Ignore package info
 src/*.egg-info/*
+
+# Ignore R environment
+*.Rprofile
+*renv.loc
+*renv/*
