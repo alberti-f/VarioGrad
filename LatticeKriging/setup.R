@@ -16,7 +16,7 @@ if(!file.exists("renv.lock")) {
 # 
 renv::activate()
 cat("Libraries available in the renv environment:\n")
-print(.libPaths())
+cat(.libPaths())
 
 # Check for required packages
 required_packages <-  as.list(scan("R_requirements.txt", sep="\n", what=character()))
@@ -34,3 +34,5 @@ if(length(new_packages)) {
 
 # Update lock file
 renv::snapshot()
+
+cat("\nSetup complete\n\n\n")
