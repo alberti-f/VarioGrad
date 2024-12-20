@@ -4,7 +4,7 @@
 renv_avail <- "renv" %in% rownames(installed.packages())
 if(!"renv" %in% rownames(installed.packages())) {
   cat("Installing renv in the base library to handle dependencies.\n")
-  install.packages("renv")
+  install.packages("renv", repos = "https://cloud.r-project.org/")
 }
 
 # Initialize renv if not existing
