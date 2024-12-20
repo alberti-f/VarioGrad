@@ -4,7 +4,7 @@
 # Lattice Kriging
 
 if(!file.exists("renv.lock")) {
-  cat("Running script to set up environment.\n")
+  cat("Running script setup.R to create the environment.\n")
   source("setup.R")
 }
 
@@ -21,7 +21,7 @@ library(rgl, lib.loc = usr.lib)
 # Set up parameters
 
 # Overwrite results
-ow <- T
+ow <- FALSE
 
 # Input arguments
 args = commandArgs(trailingOnly=TRUE)
@@ -59,22 +59,25 @@ verbose = TRUE
 
 # Set paths to relevant directories
 
-DATA <- "/gpfs3/well/margulies/users/bez157"
-outdir <- "/VarioGrad_project/R_scripts/Output"
-
-subj_list <- as.matrix(read.csv(paste0(DATA, "/Data/subj_IDs_500.txt"),
-                                header = FALSE, sep = " "))
-subj_list <- subj_list[1:nsub]
-reticulate::use_virtualenv(paste0(DATA, "/python/python.3.11.3-skylake/"))
 np <- import("numpy")
+vgu <- import("variograd_utils")
+ds <- vgu$dataset()
+
+
+outdir <- ds$output_dir
+subj_list <- as.matrix(ds$subj_list)
+subj_list <- subj_list[1:nsub]
+
 
 ################################################################################
-
+print(paste0(outdir, "/LKresults.", algorithm, "/", H,
+             "/R2s/LK.searchlight.nvtx.v", vtx, ".csv"))
 if (!ow) {
-  filename <- paste0(DATA, outdir, "/R2s/LK.block-wise.nvtx.v", vtx, ".csv")
+  filename <- paste0(outdir, "/LKresults.", algorithm, "/", H,
+                     "/R2/LK.searchlight.nvtx.v", vtx, ".csv")
   if (file.exists(filename)) {stop("Vertex already processed")}
 }
-
+stop()
 ################################################################################
 
 # Load and set up data
@@ -86,7 +89,7 @@ n.train = length(train.idx)
 n.test = nsub - n.train
 
 # Load gradients
-filename <- paste0(DATA, "/VarioGrad_project/output/500avg.",
+filename <- paste0(outdir, "/500avg.",
                    H,".FC_embeddings_flip.a05_t1.G", g, ".csv")
 gradients <- as.matrix(read.csv(filename))
 
@@ -101,8 +104,7 @@ gradients.train <- matrix(as.vector(t(gradients.train)), ncol = 1)
 
 
 # Load embeddings and reate group mean and aplit train/test dataset
-embeddings <- np$load(paste0(DATA,"/VarioGrad_project/output",
-                             "/All.",H,".embeddings.npz"))[[algorithm]]
+embeddings <- np$load(paste0(outdir, "/All.",H,".embeddings.npz"))[[algorithm]]
 embeddings <- embeddings[1:nsub, 1:nvtx, 1:3]
 locations.avg <- colMeans(embeddings[train.idx,,])
 locations.train <- matrix(aperm(embeddings[train.idx,,], c(2, 1, 3)),
@@ -292,108 +294,108 @@ cat("Computed correlation\n")
 ################################################################################
 ################################################################################
 
-# # Save output
-# 
-# # Strip heavy data
-# 
-# LKfit$x = list()
-# LKfit$y = list()
-# LKfit$Z = list()
-# LKfit$residuals = list()
-# LKfit$weights = list()
-# 
-# LKfit.Z$x = list()
-# LKfit.Z$y = list()
-# LKfit.Z$Z = list()
-# LKfit.Z$residuals = list()
-# LKfit.Z$weights = list()
+# Save output
 
-# ################################################################################
-# 
-# # Save output
-# outpath <- paste0(DATA, outdir, "/LKresults.", algorithm)
-# if (!dir.exists(outpath)) {dir.create(outpath)}
-# 
-# outpath <- paste0(outpath, "/", H)
-# if (!dir.exists(outpath)) {
-#   dir.create(outpath)
-#   dir.create(paste0(outpath, "/Cors"))
-#   dir.create(paste0(outpath, "/R2"))
-#   dir.create(paste0(outpath, "/MLEs"))
-#   dir.create(paste0(outpath, "/LKmodels"))
-#   dir.create(paste0(outpath, "/NVertex"))
-# }
-# 
-# 
-# params <- data.frame(
-#   vtx = vtx,
-#   scale = scale,
-#   algorithm = algorithm,
-#   diffusion = diffusion,
-#   g = g,
-#   nvtx = nvtx,
-#   nsub = nsub,
-#   nlevel = nlevel,
-#   NC = NC,
-#   NC.buffer = NC.buffer,
-#   overlap = overlap,
-#   a.wght = a.wght,
-#   alpha = alpha,
-#   LKGeometry = LKGeometry,
-#   mean.neighbor = mean.neighbor
-# )
-# nameout <- paste0(outpath, "/parameters.csv")
-# if (!exists(nameout)) {
-#   write.csv(params, nameout)
-# }
-# 
-# 
-# MLE.df <- t(data.frame(LKfit = LKfit$MLE$summary,
-#                        LKfit.Z = LKfit.Z$MLE$summary))
-# nameout <- paste0(outpath, "/MLEs/LK.block-wise.MLE.v", vtx, ".csv")
-# write.csv(MLE.df, nameout)
-# 
-# 
-# R2.df <- data.frame(r2.train=r2.train,
-#                     r2.train.gavg=r2.train.gavg,
-#                     r2.train.savg=r2.train.savg,
-#                     r2.train.Z.full=r2.train.Z.full,
-#                     r2.train.Z.fixed=r2.train.Z.fixed,
-#                     r2.train.Z.avg=r2.train.Z.avg,
-#                     r2.test=r2.test,
-#                     r2.test.gavg=r2.test.gavg,
-#                     r2.test.savg=r2.test.savg,
-#                     r2.test.Z.full=r2.test.Z.full,
-#                     r2.test.Z.fixed=r2.test.Z.fixed,
-#                     r2.test.Z.avg=r2.test.Z.avg)
-# nameout <- paste0(outpath, "/R2/LK.block-wise.R2.v", vtx, ".csv")
-# write.csv(R2.df, nameout, row.names=FALSE)
-# 
-# 
-# cor.df <- data.frame(cor.train=cor.train,
-#                     cor.train.gavg=cor.train.gavg,
-#                     cor.train.savg=cor.train.savg,
-#                     cor.train.Z.full=cor.train.Z.full,
-#                     cor.train.Z.fixed=cor.train.Z.fixed,
-#                     cor.train.Z.avg=cor.train.Z.avg,
-#                     cor.test=cor.test,
-#                     cor.test.gavg=cor.test.gavg,
-#                     cor.test.savg=cor.test.savg,
-#                     cor.test.Z.full=cor.test.Z.full,
-#                     cor.test.Z.fixed=cor.test.Z.fixed,
-#                     cor.test.Z.avg=cor.test.Z.avg)
-# nameout <- paste0(outpath, "/Cors/LK.block-wise.cor.v", vtx, ".csv")
-# write.csv(cor.df, nameout, row.names = FALSE)
-# 
-# 
-# nameout <- paste0(outpath, "/NVertex/LK.block-wise.nvtx.v", vtx, ".csv")
-# write.csv(data.frame(subj.nvtx), nameout, row.names=FALSE)
-# 
-# 
-# # LKmodels <- list(LKfit=LKfit, LKfit.Z=LKfit.Z)
-# # nameout <- paste0(outpath, "/LKmodels/LK.block-wise.LKmdl.v", vtx, ".RData")
-# # save(LKmodels, file=nameout)
-# 
-# 
-# cat("")
-# cat("Output saved\n")
+# Strip heavy data
+
+LKfit$x = list()
+LKfit$y = list()
+LKfit$Z = list()
+LKfit$residuals = list()
+LKfit$weights = list()
+
+LKfit.Z$x = list()
+LKfit.Z$y = list()
+LKfit.Z$Z = list()
+LKfit.Z$residuals = list()
+LKfit.Z$weights = list()
+
+################################################################################
+
+# Save output
+outpath <- paste0(outdir, "/LKresults.", algorithm)
+if (!dir.exists(outpath)) {dir.create(outpath)}
+
+outpath <- paste0(outpath, "/", H)
+if (!dir.exists(outpath)) {
+  dir.create(outpath)
+  dir.create(paste0(outpath, "/Cors"))
+  dir.create(paste0(outpath, "/R2"))
+  dir.create(paste0(outpath, "/MLEs"))
+  dir.create(paste0(outpath, "/LKmodels"))
+  dir.create(paste0(outpath, "/NVertex"))
+}
+
+
+params <- data.frame(
+  vtx = vtx,
+  scale = scale,
+  algorithm = algorithm,
+  diffusion = diffusion,
+  g = g,
+  nvtx = nvtx,
+  nsub = nsub,
+  nlevel = nlevel,
+  NC = NC,
+  NC.buffer = NC.buffer,
+  overlap = overlap,
+  a.wght = a.wght,
+  alpha = alpha,
+  LKGeometry = LKGeometry,
+  mean.neighbor = mean.neighbor
+)
+nameout <- paste0(outpath, "/parameters.csv")
+if (!exists(nameout)) {
+  write.csv(params, nameout)
+}
+
+
+MLE.df <- t(data.frame(LKfit = LKfit$MLE$summary,
+                       LKfit.Z = LKfit.Z$MLE$summary))
+nameout <- paste0(outpath, "/MLEs/LK.searchlight.MLE.v", vtx, ".csv")
+write.csv(MLE.df, nameout)
+
+
+R2.df <- data.frame(r2.train=r2.train,
+                    r2.train.gavg=r2.train.gavg,
+                    r2.train.savg=r2.train.savg,
+                    r2.train.Z.full=r2.train.Z.full,
+                    r2.train.Z.fixed=r2.train.Z.fixed,
+                    r2.train.Z.avg=r2.train.Z.avg,
+                    r2.test=r2.test,
+                    r2.test.gavg=r2.test.gavg,
+                    r2.test.savg=r2.test.savg,
+                    r2.test.Z.full=r2.test.Z.full,
+                    r2.test.Z.fixed=r2.test.Z.fixed,
+                    r2.test.Z.avg=r2.test.Z.avg)
+nameout <- paste0(outpath, "/R2/LK.searchlight.R2.v", vtx, ".csv")
+write.csv(R2.df, nameout, row.names=FALSE)
+
+
+cor.df <- data.frame(cor.train=cor.train,
+                    cor.train.gavg=cor.train.gavg,
+                    cor.train.savg=cor.train.savg,
+                    cor.train.Z.full=cor.train.Z.full,
+                    cor.train.Z.fixed=cor.train.Z.fixed,
+                    cor.train.Z.avg=cor.train.Z.avg,
+                    cor.test=cor.test,
+                    cor.test.gavg=cor.test.gavg,
+                    cor.test.savg=cor.test.savg,
+                    cor.test.Z.full=cor.test.Z.full,
+                    cor.test.Z.fixed=cor.test.Z.fixed,
+                    cor.test.Z.avg=cor.test.Z.avg)
+nameout <- paste0(outpath, "/Cors/LK.searchlight.cor.v", vtx, ".csv")
+write.csv(cor.df, nameout, row.names = FALSE)
+
+
+nameout <- paste0(outpath, "/NVertex/LK.searchlight.nvtx.v", vtx, ".csv")
+write.csv(data.frame(subj.nvtx), nameout, row.names=FALSE)
+
+
+# LKmodels <- list(LKfit=LKfit, LKfit.Z=LKfit.Z)
+# nameout <- paste0(outpath, "/LKmodels/LK.searchlight.LKmdl.v", vtx, ".RData")
+# save(LKmodels, file=nameout)
+
+
+cat("")
+cat("Output saved\n")
