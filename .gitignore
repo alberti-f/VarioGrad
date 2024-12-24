@@ -32,6 +32,7 @@ src/*.egg-info/*
 
 # Ignore R environment
 *.Rproj
+*.Rhistory
 *.Rprofile
 *renv.lock
 */renv/*
