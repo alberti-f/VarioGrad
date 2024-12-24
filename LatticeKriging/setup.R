@@ -19,7 +19,10 @@ cat("Libraries available in the renv environment:\n")
 cat(.libPaths())
 
 # Check for required packages
-required_packages <-  as.list(scan("R_requirements.txt", sep="\n", what=character()))
+args = commandArgs(trailingOnly=F)
+reqs_path <- dirname(sub("--file=", "", args[grep("--file=", args)]))
+reqs_path <- paste0(reqs_path, "/R_requirements.txt")
+required_packages <-  as.list(scan(reqs_path, sep="\n", what=character()))
 new_packages <- required_packages[
   !(required_packages %in% rownames(installed.packages()))
   ]
