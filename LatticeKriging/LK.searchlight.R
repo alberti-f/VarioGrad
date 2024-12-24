@@ -1,11 +1,14 @@
 ################################################################################
 ################################################################################
-
 # Lattice Kriging
+
+
 
 if(!file.exists("renv.lock")) {
   cat("Running script setup.R to create the environment.\n")
-  source("setup.R")
+  args = commandArgs(trailingOnly=F)
+  setup_path <- dirname(sub("--file=", "", args[grep("--file=", args)]))
+  source(paste0(setup_path, "/setup.R"))
 }
 
 # Setup environment
@@ -24,7 +27,7 @@ library(rgl, lib.loc = usr.lib)
 ow <- FALSE
 
 # Input arguments
-args = commandArgs(trailingOnly=TRUE)
+args = commandArgs(trailingOnly=T)
 H = as.character(args[[1]])
 vtx = as.integer(args[[2]])
 scale = as.integer(args[[3]])
