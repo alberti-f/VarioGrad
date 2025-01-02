@@ -31,10 +31,6 @@ H = as.character(args[[1]])
 vtx = as.integer(args[[2]])
 scale = as.integer(args[[3]])
 
-# H = "L" #as.character(args[[1]])
-# vtx = 11 #as.integer(args[[2]])
-# scale = 200 #as.integer(args[[3]])
-
 
 # Embeddings-related parameters
 algorithm <- paste0("JE_cauchy", scale)
