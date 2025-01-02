@@ -17,20 +17,23 @@ usr.lib <- NULL
 library(caret, lib.loc = usr.lib)
 library(reticulate, lib.loc = usr.lib)
 library(LatticeKrig, lib.loc = usr.lib)
-library(rgl, lib.loc = usr.lib)
 
 ################################################################################
 
 # Set up parameters
 
 # Overwrite results
-ow <- FALSE
+ow <- TRUE
 
 # Input arguments
 args = commandArgs(trailingOnly=T)
 H = as.character(args[[1]])
 vtx = as.integer(args[[2]])
 scale = as.integer(args[[3]])
+
+# H = "L" #as.character(args[[1]])
+# vtx = 11 #as.integer(args[[2]])
+# scale = 200 #as.integer(args[[3]])
 
 
 # Embeddings-related parameters
@@ -73,14 +76,11 @@ subj_list <- subj_list[1:nsub]
 
 
 ################################################################################
-print(paste0(outdir, "/LKresults.", algorithm, "/", H,
-             "/R2s/LK.searchlight.nvtx.v", vtx, ".csv"))
 if (!ow) {
   filename <- paste0(outdir, "/LKresults.", algorithm, "/", H,
                      "/R2/LK.searchlight.nvtx.v", vtx, ".csv")
   if (file.exists(filename)) {stop("Vertex already processed")}
 }
-stop()
 ################################################################################
 
 # Load and set up data
