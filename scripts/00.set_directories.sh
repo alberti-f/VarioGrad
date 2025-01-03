@@ -1,31 +1,65 @@
 #!/bin/bash
+#
+# This script saves key directories required for analysis in a file named
+# `directories.txt` located in the `variograd_utils` directory.
+#
+# USAGE:
+#   ./set_directories.sh -g <group_dir> -s <subj_dir> -o <output_dir> -l <subj_list> -m <10k_meshes>
+#
+# OPTIONS:
+#   -g <group_dir>   Directory containing group average data (e.g., `HCP_S1200_GroupAvg_v1`).
+#   -s <subj_dir>    Directory containing individual subject subdirectories.
+#   -o <output_dir>  Directory where results will be saved.
+#   -l <subj_list>   Path to a text file listing subject IDs (one ID per line).
+#   -m <mesh10k_dir> Path to the directory containing 10k surface meshes.
+#
+# FUNCTIONALITY:
+#   - Writes the current working directory as `work_dir` to the `directories.txt` file.
+#   - Appends the specified paths for `group_dir`, `subj_dir`, `output_dir`, `subj_list`, and `mesh10k_dir`.
+#   - Truncates the existing `directories.txt` file if it already exists.
+#
+# NOTES:
+#   - Ensure the `variograd_utils` directory exists in the current working directory.
+#   - The script relies on Python to locate the `variograd_utils` module.
+#   - All paths are saved in the format: `key=value` for use in downstream analyses.
+#
+# EXAMPLES:
+#   ./set_directories.sh -g /path/to/group_data -s /path/to/subject_data -o /path/to/output \
+#                        -l /path/to/subject_list.txt -m /path/to/10k_meshes
+#
 
-# Set the directories for the whole study.
-#           This script creates a file in the variograd_utils directory 
-#           stating the key directories used throughout the analyses.
-#           For this to be possible the variograd_utils directory should 
-#           be in the same working directory from which this script is 
-#           executed from.
-#           
 
 # ------------------------------------------------------------------
 
-VERSION=0.1.0
-NAME="./set_directories.sh"
 function USAGE {
-    echo "SET WORK AND DATASET DIRECTORIES FOR THE ANALYSES"
-    echo -e "\nusage: $NAME -g <group_dir> -s <subj_dir> -o <output_dir> -l <subj_list> -m <10k_meshes>"
-    echo -e "    -g <group_dir>      Directory where group average data is stored."
-    echo -e "                         This should be the HCP_S1200_GroupAvg_v1"
-    echo -e "                         folder of the HCP dataset"
-    echo -e "    -s <subj_dir>       Directory where individual data folders are stored"
-    echo -e "                         This should be the directory containing the"
-    echo -e "                         subjects' subdirectories"
-    echo -e "    -o <output_dir>     Directory where the results are saved"
-    echo -e "    -l <subj_list>      Path to a txt file containing HCP subject IDs"
-    echo -e "    -m <mesh10k_dir>     directory containing 10k surface meshes"
+    echo "Usage: ./set_directories.sh -g <group_dir> -s <subj_dir> -o <output_dir> -l <subj_list> -m <10k_meshes>"
+    echo ""
+    echo "This script saves key directories required for analysis in a file named"
+    echo "'directories.txt' located in the 'variograd_utils' directory."
+    echo ""
+    echo "Options:"
+    echo "  -g <group_dir>   Directory containing group average data (e.g., 'HCP_S1200_GroupAvg_v1')."
+    echo "  -s <subj_dir>    Directory containing individual subject subdirectories."
+    echo "  -o <output_dir>  Directory where results will be saved."
+    echo "  -l <subj_list>   Path to a text file listing subject IDs (one ID per line)."
+    echo "  -m <mesh10k_dir> Path to the directory containing 10k surface meshes."
+    echo ""
+    echo "Functionality:"
+    echo "  - Writes the current working directory as 'work_dir' to the 'directories.txt' file."
+    echo "  - Appends the specified paths for 'group_dir', 'subj_dir', 'output_dir', 'subj_list', and 'mesh10k_dir'."
+    echo "  - Truncates the existing 'directories.txt' file if it already exists."
+    echo ""
+    echo "Notes:"
+    echo "  - Ensure the 'variograd_utils' directory exists in the current working directory."
+    echo "  - This script uses Python to locate the 'variograd_utils' module."
+    echo "  - All paths are saved in the format 'key=value' for use in downstream analyses."
+    echo ""
+    echo "Examples:"
+    echo "  ./set_directories.sh -g /path/to/group_data -s /path/to/subject_data -o /path/to/output \\"
+    echo "                       -l /path/to/subject_list.txt -m /path/to/10k_meshes"
     exit 1
 }
+
 
 if [ $# == 0 ] ; then
     USAGE
