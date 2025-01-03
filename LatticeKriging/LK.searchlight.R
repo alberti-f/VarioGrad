@@ -1,8 +1,44 @@
-################################################################################
-################################################################################
-# Lattice Kriging
+#' Lattice Kriging Spatial Modeling Script
+#'
+#' This script performs Lattice Kriging analyses of functional gradients
+#' in intrinsic cortical geometry.
+#' 
+#' ## Key Features
+#' 1. **Environment Setup**:
+#'    - Ensures `renv` environment is initialized and necessary libraries are loaded.
+#'    - Sources a `setup.R` script for environment preparation if `renv.lock` is missing.
+#' 2. **Parameter Configuration**:
+#'    - Reads input arguments and sets model parameters (e.g., number of vertices, scale).
+#' 3. **Data Preparation**:
+#'    - Loads, partitions, and processes gradient and embedding data.
+#'    - Selects data points within a spatial domain centered on a vertex of interest.
+#' 4. **Model Fitting**:
+#'    - Fits Lattice Kriging models with and without covariates.
+#'    - Configures covariance matrices and spatial model parameters.
+#' 5. **Prediction and Evaluation**:
+#'    - Generates predictions for test data.
+#'    - Computes R² and correlation metrics for model evaluation.
+#' 6. **Results Saving**:
+#'    - Saves parameters, model fits, and evaluation metrics to output directories.
+#'
+#' ## Inputs
+#' - **Command-line arguments**:
+#'    - `H`: Hemisphere (`"L"` for left, `"R"` for right).
+#'    - `vtx`: Index of the vertex to be analyzed.
+#'    - `scale`: Scaling factor for the analysis.
+#' - **Data files**: Embeddings and gradients for spatial modeling.
+#'
+#' ## Outputs
+#' - Parameters and results, including R² and correlations, saved in structured directories.
+#'
+#' ## Dependencies
+#' Requires the following packages: `caret`, `reticulate`, `LatticeKrig`, and `renv`.
+#'
+#' @keywords Lattice Kriging, Spatial Modeling, Gradient Analysis
 
 
+################################################################################
+################################################################################
 
 if(!file.exists("renv.lock")) {
   cat("Running script setup.R to create the environment.\n")

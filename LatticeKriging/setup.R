@@ -1,4 +1,27 @@
-# Set up R environment for Lattice Kriging analyses
+#' Lattice Kriging Analysis Setup Script
+#'
+#' This R script sets up the environment for performing Lattice Kriging analyses.
+#'
+#' ## Workflow
+#' 1. Checks for the availability of the `renv` package and installs it if necessary.
+#' 2. Initializes an `renv` environment if it does not already exist.
+#' 3. Activates the `renv` environment and prints the current library paths.
+#' 4. Reads a list of required packages from an external `R_requirements.txt` file 
+#'    located in the same directory as the script.
+#' 5. Identifies and installs any missing packages listed in the requirements file.
+#' 6. Updates the `renv.lock` file to reflect the current package environment.
+#'
+#' ## External File Dependency
+#' - The `R_requirements.txt` must be placed in the same directory as the script.
+#'
+#' ## Output
+#' - Updates the `renv.lock` file to capture the package state.
+#'
+#' ## Note
+#' - The script assumes that it is run from the command line using `Rscript`.
+#'
+#' @keywords Lattice Kriging, renv, R Environment Setup, Dependency Management
+
 
 # Install renv if not present
 renv_avail <- "renv" %in% rownames(installed.packages())
