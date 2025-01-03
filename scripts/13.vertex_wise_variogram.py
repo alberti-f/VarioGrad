@@ -1,5 +1,47 @@
-import psutil
-import sys, os
+"""
+This script calculates experimental and modeled variograms for vertex-wise comparisons 
+between functional and geometric embeddings across subjects.
+
+Parameters:
+    <alg_idx>: Integer
+        The index of the embedding algorithm to process, based on a predefined list.
+
+Steps:
+1. Parameter Configuration:
+    - Specify algorithms, embedding dimensions, lag numbers, and maximum distance fractions.
+    - Define fixed parameters such as gradient dimension, overlap percentage, and minimum pairs.
+
+2. Load Data:
+    - Load geometric embeddings for the specified algorithm and
+      functional embeddings for all subjects.
+
+3. Variogram Computation:
+    - For each combination of algorithm, embedding dimensions, lag numbers, and max distance:
+        - Define lags based on the median maximum distance across geometric embeddings.
+        - Compute experimental variograms for each vertex.
+        - Fit spherical, exponential, and Gaussian models to the experimental variograms.
+
+4. Save Results:
+    - Save experimental variograms, lags, lag pairs, and model parameters to `.npz` files.
+
+Dependencies:
+    - `variograd_utils`: For dataset and subject handling, and variogram utilities.
+    - `numpy`: For numerical computations and array handling.
+
+Outputs:
+    - Variogram results for each hemisphere and parameter combination:
+        `<output_dir>/variograms/<data_id>.<H>.variogram_<algorithm>.nd<ndim>_nl<nlags>_mxl<max_dist_fraction>.npz`
+
+Notes:
+    - The variogram models are fitted using curve fitting, which may fail for poorly behaved data.
+    - Parameters like `ndims`, `nlagss`, and `max_dist_fracts` control the granularity and scope of 
+      computations.
+
+"""
+
+
+import sys
+import os
 from itertools import product
 import numpy as np
 from sklearn.metrics.pairwise import euclidean_distances
@@ -29,16 +71,18 @@ data =  dataset()
 
 for h in hemispheres:
     print("\nHemisphere:", h)
-    hemi = slice(vertex_info_10k.grayl.size) if h == "L" else slice(vertex_info_10k.grayl.size, None)
+    hemi = slice(vertex_info_10k.grayl.size) if h == "L" else slice(vertex_info_10k.grayl.size,None)
     parameters = product(algorithms, ndims, nlagss, max_dist_fracts)
-    
+
     # Loading coordinates in geometric embedding
     print("\n\tLoading coordinates in geometric embedding")
     LE_all = data.load_embeddings(h, "JE")
 
     # Loading coordinates in functional embedding
     print("\n\tLoading coordinates in functional embedding")
-    load_gradient = lambda ID: np.load(subject(ID).outpath(f'{ID}.FC_embeddings.npz'))[alpha_time][hemi, grd]
+    load_gradient = lambda ID: np.load(
+        subject(ID).outpath(f'{ID}.FC_embeddings.npz')
+        )[alpha_time][hemi, grd]
     gradients = np.vstack([load_gradient(ID) for ID in data.subj_list], dtype="float32").T
 
     for algorithm, ndim, nlags, fract in parameters:
@@ -104,5 +148,7 @@ for h in hemispheres:
         # Save out results
         if not os.path.exists(data.outpath("variograms")):
             os.mkdir(data.outpath("variograms"))
-        filename = f"variograms/{data.id}.{h}.variogram_{algorithm}.nd{ndim}_nl{nlags}_mxl{int(fract * 100)}.npz"
+        filename = (f"variograms/"
+            + f"{data.id}.{h}.variogram_{algorithm}"
+            + f".nd{ndim}_nl{nlags}_mxl{int(fract * 100)}.npz")
         npz_update(data.outpath(filename), results)
