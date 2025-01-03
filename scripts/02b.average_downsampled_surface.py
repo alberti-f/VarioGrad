@@ -1,9 +1,39 @@
-from variograd_utils import *
+"""
+Generate Group-Average Surface and Compute Geodesic Distances.
+
+The script relies on pre-defined paths and data structures from the `variograd_utils` package.
+
+Steps:
+    1. **Generate Average Surfaces**:
+        - Creates average midthickness surfaces for left (`L`) and right (`R`) hemispheres
+          at 10k resolution.
+    2. **Remove Medial Wall**:
+        - Extracts cortical vertices from group-average surfaces using `vertex_info_10k`.
+        - Saves the processed surfaces in GIFTI.
+    3. **Compute Geodesic Distances**:
+        - Calculates geodesic distances between all vertices on the cortical surfaces.
+        - Outputs a numpy array of the upper triangular geodesic distance matrix.
+
+Dependencies:
+    - `variograd_utils`: Provides dataset handling and utility functions.
+    - `surfdist`: For cortical surface processing.
+    - `nibabel`: For loading and saving GIFTI files.
+    - `wb_command`: Workbench tool for geodesic distance computations.
+
+Outputs:
+    - GIFTI surfaces: `<mesh10k_dir>/<id>.<H>.cortex_midthickness_MSMAll.10k_fs_LR.surf.gii`
+    - Geodesic distance matrix: `<output_dir>/<id>.<H>.gdist_triu.10k_fs_LR.npy`
+
+"""
+
+
 from os.path import exists
 from subprocess import run
+import numpy as np
 import nibabel as nib
 import surfdist as sd
-
+from variograd_utils import dataset
+from variograd_utils.brain_utils import vertex_info_10k, save_gifti
 
 # Generate average surface
 print("\n\nGenerating average group surface.")
@@ -22,7 +52,8 @@ for H in ["L", "R"]:
     cortex_surf = sd.utils.surf_keep_cortex(full_surf, cortex=cortex_idx)
     structure = ["CORTEX_LEFT" if H=="L" else "CORTEX_RIGHT"][0]
     filename = f"{data.mesh10k_dir}/{data.id}.{H}.cortex_midthickness_MSMAll.10k_fs_LR.surf.gii"
-    save_gifti(darrays=cortex_surf, intents=[1008, 1009], dtypes=["NIFTI_TYPE_FLOAT32","NIFTI_TYPE_INT32"], 
+    save_gifti(darrays=cortex_surf, intents=[1008, 1009],
+               dtypes=["NIFTI_TYPE_FLOAT32","NIFTI_TYPE_INT32"], 
             filename=filename, structure=structure)
 
 
@@ -31,7 +62,6 @@ for H in ["L", "R"]:
 print("\n\nComputing geodesic distances on the group surface.")
 
 command = "wb_command -surface-geodesic-distance-all-to-all {0} {1}"
-
 
 for h in ["L", "R"]:
 
@@ -44,4 +74,6 @@ for h in ["L", "R"]:
     run(command.format(surface, dconn), shell=True)
     gdist_matrix = nib.load(dconn)
 
-    np.save(filename, gdist_matrix.get_fdata(caching="unchanged")[np.triu_indices_from(gdist_matrix, k=1)].astype("float32"))
+    np.save(filename,
+            gdist_matrix.get_fdata(caching="unchanged"
+                                   )[np.triu_indices_from(gdist_matrix, k=1)].astype("float32"))

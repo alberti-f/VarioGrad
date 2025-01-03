@@ -1,22 +1,44 @@
-# Generate group-level CortexMask for the 10k_fs_LR surface.
-#           This script was used to generate masks separating the cortical mantle 
-#           from the medial wall. These are necessary to later on remove the
-#           medial wall from individual surfaces when computing the
-#           geodesic distance between vertices in WorkBench
-#
-#           Note: The script assumes that the 32k and 10k spheres are found in
-#           <group-dir> and <group-dir>/10k_fs_LR/ respectively
-#           
-#           usage: python create_cortex_dlabel <group-dir>
-#                   <group-dir>:    directory containing the goup average
-#                                   surfaces and the 10k_fs_LR subdirectory
-# ------------------------------------------------------------------
+"""
+This script creates masks for the cortical mantle, excluding the medial wall, for 
+group-average surfaces. The generated masks are used in downstream analyses, such as 
+removing the medial wall when computing geodesic distances between vertices in WorkBench.
 
+Directories and paths are derived from the `dataset` class in `variograd_utils`.
+
+Steps:
+    - Generates 32k cortical masks for the left and right hemispheres based on 
+      vertex information (`hcp.vertex_info`).
+    - Saves 32k masks as GIFTI files.
+    - Downsamples the masks to 10k resolution using `wb_command` with the BARYCENTRIC method.
+    - Refines the downsampled masks with mathematical operations.
+    - Saves vertex information, including cortical regions and offsets, as a `.npz` file 
+      for use in the `brain_utils` module.
+
+Dependencies:
+    - Requires the `hcp_utils` package for cortical vertex information.
+    - Uses the `workbench` command-line tool (`wb_command`) for resampling operations.
+    - Requires directories for 32k and 10k spheres, set in the `variograd_utils` dataset class.
+
+Outputs:
+    - 32k cortical masks: `<output_dir>/S1200.<H>.CortexMask.32k_fs_LR.shape.gii`
+    - 10k cortical masks: `<output_dir>/S1200.<H>.CortexMask.10k_fs_LR.shape.gii`
+    - Vertex information: `<utils_dir>/fMRI_vertex_info_10k.npz`
+
+Notes:
+    - Ensure that `group_dir`, `mesh10k_dir`, and `output_dir` are correctly set in the 
+      `variograd_utils.dataset` class.
+    - Sphere files for 32k and 10k surfaces must exist in the appropriate directories:
+        - 32k spheres: `<group_dir>/S1200.<H>.sphere.32k_fs_LR.surf.gii`
+        - 10k spheres: `<mesh10k_dir>/S1200.<H>.sphere.10k_fs_LR.surf.gii`
+
+"""
+
+
+from subprocess import run
 import numpy as np
 from nibabel import gifti, save, load
 import hcp_utils as hcp
-from subprocess import run
-from variograd_utils import *
+from variograd_utils import dataset
 
 data = dataset()
 group_dir = data.group_dir
@@ -32,8 +54,10 @@ sphere10k_path = mesh10k_dir + "/S1200.{0}.sphere.10k_fs_LR.surf.gii"
 
 # get cortex vertices
 vinfo = hcp.vertex_info
-left_cortex = np.zeros(vinfo.num_meshl); left_cortex[vinfo.grayl] = 1
-right_cortex = np.zeros(vinfo.num_meshr); right_cortex[vinfo.grayr] = 1
+left_cortex = np.zeros(vinfo.num_meshl)
+left_cortex[vinfo.grayl] = 1
+right_cortex = np.zeros(vinfo.num_meshr)
+right_cortex[vinfo.grayr] = 1
 
 left_cortex=gifti.GiftiDataArray(data=left_cortex, intent=0, datatype="NIFTI_TYPE_INT32")
 right_cortex=gifti.GiftiDataArray(data=right_cortex, intent=0, datatype="NIFTI_TYPE_INT32")
@@ -64,7 +88,8 @@ command = f"\
 vinfo = {}
 run(command, shell=True)
 for h in ["L", "R"]:
-    mask = load(f"{data.output_dir}/S1200.{h}.CortexMask.10k_fs_LR.shape.gii").darrays[0].data.astype("bool")
+    mask = load(f"{data.output_dir}/S1200.{h}.CortexMask.10k_fs_LR.shape.gii"
+                ).darrays[0].data.astype("bool")
     vinfo[f"num_mesh{h.lower()}"] = len(mask)
     vinfo[f"gray{h.lower()}"] = np.arange(len(mask))[mask]
     vinfo[f"offset{h.lower()}"] = len(mask)*(h=="R")

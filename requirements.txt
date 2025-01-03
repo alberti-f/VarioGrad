@@ -8,3 +8,4 @@ nibabel==4.0.2
 nilearn>=0.10.4
 hcp_utils==0.1.0
 surfdist @ git+https://github.com/alberti-f/surfdist.git
+statsmodels

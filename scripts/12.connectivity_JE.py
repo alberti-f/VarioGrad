@@ -1,3 +1,43 @@
+"""
+Compute Joint Embedding of Functional Connectivity Matrices.
+
+This script computes a joint diffusion map embedding of individual and group-average 
+functional connectivity (FC) matrices for a single subject. It aligns the embeddings 
+across subjects using cosine similarity and saves the results as `.npz` files.
+
+Parameters:
+    <idx>: Integer
+        Index of the subject in the subject list file.
+
+Steps:
+1. **Load and Threshold FC Matrices**:
+    - Load the group-average FC matrix and threshold it by retaining the top n% values.
+    - Compute the individual subject's FC matrix from their timeseries, and threshold it.
+
+2. **Compute Correspondence Matrix**:
+    - Calculate a cosine similarity matrix between the thresholded group and individual FC matrices.
+
+3. **Compute Joint Embeddings**:
+    - Perform a joint diffusion map embedding using the individual and group FC matrices,
+      along with the correspondence matrix.
+    - Use combinations of `alpha` and `diffusion_time` to compute multiple embeddings.
+
+4. **Save Results**:
+    - Save the computed embeddings and their reference versions to `.npz` files.
+
+Outputs:
+    - Joint embeddings:
+        `<output_dir>/<subject>.FC_embeddings_flip.npz`
+    - Reference embeddings:
+        `<output_dir>/<subject>.FC_embeddings_flip_refs.npz`
+
+Notes:
+    - The `threshold` parameter retains the top percentile values in the FC matrices for sparsity.
+    - Embeddings are computed for all combinations of `alpha` and `diffusion_time`.
+
+"""
+
+
 import sys
 from itertools import product
 import numpy as np
@@ -47,7 +87,7 @@ je = JointEmbedding(method="dme",
                     copy=True)
 
 # Preallocate memory
-kwarg_dict = {f"a{str(a).replace('.', '')}_t{t}": {"alpha": a, "diffusion_time": t} 
+kwarg_dict = {f"a{str(a).replace('.', '')}_t{t}": {"alpha": a, "diffusion_time": t}
               for a, t in product(alphas, diffusion_times)}
 
 embedding_dict = {k: np.zeros([M.shape[0], n_components])
@@ -58,7 +98,7 @@ reference_dict = {k: np.zeros([M.shape[0], n_components])
 
 # Compute gradients with all combinations of alpha and time
 for key, kwargs in kwarg_dict.items():
-    
+
     embedding_dict[key], reference_dict[key] = je.fit_transform(M.T, R.T, C=C,
                                                                  affinity="cosine",
                                                                  method_kwargs=kwargs)

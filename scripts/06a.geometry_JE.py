@@ -1,4 +1,47 @@
-# Joint Embedding of geodesic distances
+"""
+This script performs joint embedding of geodesic distance matrices for individual 
+subjects and group-average surfaces.
+
+Steps:
+    1. Parse the subject index and retrieve the corresponding subject ID.
+    2. Load geodesic distance matrices and cortical surfaces for the subject and 
+       group-average surfaces.
+    3. Compute a combined geodesic distance matrix by averaging subject and group 
+       distances, and adding Euclidean distances between vertices.
+    4. For each combination of kernel and scale parameters:
+        - Adjust the geodesic distance matrices using the specified kernel and scale.
+        - Perform joint embedding with the adjusted matrices.
+        - Save the resulting embeddings for the parameter combination.
+    5. Save all embeddings in a compressed `.npz` archive for each hemisphere.
+
+Parameters:
+    <index>: Integer
+        The index (1-based) of the subject in the subject list file specified in `directories.txt`. 
+
+Dependencies:
+    - `variograd_utils`: For dataset and subject handling, embedding, and kernel utilities.
+    - `psutil`: For monitoring memory usage.
+    - `numpy`: For numerical computations and file handling.
+
+Inputs:
+    - Geodesic distance matrices for left and right hemispheres:
+        `<output_dir>/<subject>.<H>.gdist_triu.10k_fs_LR.npy`
+    - Group-average cortical surfaces:
+        `<group_dir>/T1w/fsaverage_LR10k/<subject>.<H>.cortex_midthickness_MSMAll.10k_fs_LR.surf.gii`
+
+Outputs:
+    - Joint embeddings for all parameter combinations:
+        `<output_dir>/<subject>.<H>.embeddings.npz`
+
+Notes:
+    - The script computes embeddings for a range of scales (50, 100, 150, 200) and kernels 
+      (`cauchy`, `gauss`, `linear`, `None`).
+    - The embedding results are stored as key-value pairs in the `.npz` file, where the 
+      key corresponds to the parameter combination.
+    - Ensure sufficient memory is available for processing large matrices.
+
+"""
+
 
 import sys
 import psutil
@@ -30,7 +73,7 @@ for h in hemi:
     C = np.sqrt(np.sum((subj_points - avg_points) ** 2, axis=1), dtype="float32")
     C = C + np.tile(C, [C.size, 1]).T
     R = data.load_gdist_matrix(h).astype("float32")
-    M = subj.load_gdist_matrix(h).astype("float32")    
+    M = subj.load_gdist_matrix(h).astype("float32")
     C += (M + R) / 2
 
     all_embeddings = {}
