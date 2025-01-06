@@ -38,6 +38,10 @@ class Variogram:
     """
 
     def __init__(self):
+        """
+        Initialize the Variogram object.
+        """
+
         self.lags = None
         self.lag_pairs = None
         self.exp_variogram = None
@@ -69,6 +73,7 @@ class Variogram:
         variogram : array_like
             The empirical variogram at each lag.
         """
+
         if points.ndim == 1:
             points = points.reshape(-1, 1)
 
@@ -513,56 +518,3 @@ def generate_spatial_data(points, correlation_length, model="spherical",
         return coordinates, data
     else:
         return data
-
-
-
-# Temporarily not implemented because seemingly slow for small datasets and few lags.
-# Might be useful in onther circumstances.
-# def nd_variogram_vectorized(points, values, lags, overlap=0, min_pairs=10
-#                             , weight=None, scale=None):
-#     """
-#     Calculate the empirical variogram for a set of points and values
-
-#     Parameters
-#     ----------
-#     points : array_like
-#         The spatial coordinates of the points. NxM array of N points in M dimensions.
-#     values : array_like
-#         The values at each point. Nx1 array.
-#     lags : array_like
-#         The lags at which to calculate the variogram.
-#     overlap : float
-#         The overlap between bins.
-
-#     Returns
-#     -------
-#     variogram : array_like
-#         The empirical variogram at each lag.
-#     """
-
-#     # Calculate the pairwise distances
-#     rows, cols = np.triu_indices(points.shape[0], k=1)
-#     dists = points[rows] - points[cols]
-#     dists = np.sqrt(np.sum(dists**2, axis=1))
-#     values = values#.squeeze()
-#     diffs = np.abs(values[rows] - values[cols])
-#     diffs = np.sqrt(np.sum(diffs**2, axis=1)) if diffs.ndim > 1 else diffs
-
-#     # Calculate the variogram
-#     lag_step = np.diff(lags).mean()
-#     lag_window = lag_step * (1 + overlap)
-#     lag_edges =  np.vstack([lags - lag_window / 2, lags + lag_window / 2])
-#     lag_masks = np.logical_and(dists >= lag_edges[0].reshape(-1, 1),
-#                                dists <= lag_edges[1].reshape(-1, 1)).astype(int)
-#     lag_npairs = lag_masks.sum(axis=1).reshape(-1, 1)
-#     lag_masks *= (lag_npairs >= min_pairs).astype(int)
-
-#     if weight is None:
-#         weights = lag_masks / lag_npairs
-#     else:
-#         weights = np.abs((dists - lags.reshape(-1, 1)))
-#         weights = kernelize(weights, kernel=weight, scale=scale) * lag_masks
-#         weights[lag_npairs] /= weights[lag_npairs].sum(axis=1).reshape(-1, 1)
-
-#     diffs_lags = weights * (diffs.reshape(1, -1) ** 2 )
-#     variogram = np.sum(diffs_lags, axis=1) / 2
