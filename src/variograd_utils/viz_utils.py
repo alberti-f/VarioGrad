@@ -5,6 +5,27 @@ import matplotlib.colors
 
 
 def Plot_to_numpy(plot):
+    """
+    Convert a surfplot.Plot object to a numpy array for including it in complex plottings
+    (e.g. in matplotlib.pyplot subplots).
+
+    Parameters
+    ----------
+    plot : surfplot.Plot
+        The plot object to be converted to a numpy array.
+
+    Returns
+    -------
+    numpy.ndarray
+        The plot as a numpy array.
+
+    Notes
+    -----
+    This function is a workaround for the fact that surfplot.Plot objects cannot be directly
+    included in matplotlib.pyplot subplots.
+
+    """
+
     plot = plot.render()
     plot._check_offscreen()
     return plot.to_numpy()

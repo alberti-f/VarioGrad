@@ -62,7 +62,7 @@ class JointEmbedding:
         Compute the joint affinity matrix of the input data.
     kernelize(A, kernel="linear", scale=None)
     """
-    
+
     def __init__(self, method="dme", n_components=2, alignment=None,
                  random_state=None, copy=True):
         self.method = method
@@ -142,13 +142,13 @@ class JointEmbedding:
         embedding_M = embedding[n:]
 
         if self.alignment is not None:
-            A = _affinity_matrix(R, method=affinity, scale=scale) if affinity != "precomputed" else R
+            A = _affinity_matrix(R,method=affinity, scale=scale) if affinity != "precomputed" else R
             embedding_R_ind, _, _ = embedding_function(A, n_components=self.n_components,
                                                        random_state=self.random_state,
                                                        **method_kwargs)
 
             embedding_M, embedding_R = self._align_embeddings(embedding_M, embedding_R,
-                                                              embedding_R_ind, method=self.alignment)
+                                                              embedding_R_ind,method=self.alignment)
             self.independent_ref = embedding_R_ind
 
 
@@ -368,7 +368,7 @@ def diffusion_map_embedding(A, n_components=2, alpha=0.5, diffusion_time=1, rand
     self : JointEmbedding
         Fitted instance of JointEmbedding.
     """
-    
+
     if np.any(A < 0):
         warnings.warn("Negative values in the adjaciency matrix set to 0", RuntimeWarning)
         A[A<0] = 0
@@ -402,7 +402,7 @@ def _diffusion_map(L, n_components=2, diffusion_time=1, random_state=None):
     L : np.ndarray
         The reference Laplacian matrix.
     """
-    
+
     n_components = n_components + 1
     embedding = TruncatedSVD(n_components=n_components,
                              random_state=random_state
@@ -411,7 +411,8 @@ def _diffusion_map(L, n_components=2, diffusion_time=1, random_state=None):
     vectors = embedding.components_.T
     lambdas = embedding.singular_values_
     if np.any(vectors[:, 0] == 0):
-        warnings.warn("0 values found in the first eigenvector; 1e-15 was added to all vectors.", RuntimeWarning)
+        warnings.warn("0 values found in the first eigenvector; 1e-15 was added to all vectors.",
+                      RuntimeWarning)
         vectors += 1e-16
 
     psi = vectors / np.tile(vectors[:, 0], (vectors.shape[1], 1)).T

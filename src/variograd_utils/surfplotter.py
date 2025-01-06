@@ -57,6 +57,10 @@ class SurfPlotter:
 
     def __init__(self, lh_surf=None, rh_surf=None, padding=20,
                  views=["lateral", "medial"], layout="grid", zoom=1):
+        """
+        Initialize the SurfPlotter object.
+        """
+
         self.lh_surf = lh_surf
         self.rh_surf = rh_surf
         self.views = views if isinstance(views, list) else [views]
@@ -321,6 +325,9 @@ class SurfPlotter:
         elif self.layout == "column":
             traslation_vector = [0, 0, v_offset]
 
+        else:
+            raise ValueError("Invalid layout. Options are 'grid', 'row' or 'column'.")
+
         return traslation_vector
 
 
@@ -431,7 +438,9 @@ class SurfPlotter:
             x, y, z = view
             y *= direction
             z = hemi_offset + (direction * z)
+        else:
+            raise ValueError("Invalid view. Options are"
+                             + "'lateral', 'medial', 'posterior', 'anterior', 'dorsal', 'ventral'.")
 
-        
         return [x, y, z]
     
