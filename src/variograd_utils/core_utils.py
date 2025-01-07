@@ -610,7 +610,7 @@ def euclidean_triu(X, k=1):
     Parameters
     ----------
     X : numpy.ndarray
-        Input matrix.
+        Input matrix of shape observations x features.
     k : int, optional
         Diagonal offset. Default is 1.
 
@@ -621,7 +621,9 @@ def euclidean_triu(X, k=1):
     """
 
     r, c = np.triu_indices(X.shape[0], k)
-    return abs(X[c] - X[r]).squeeze()
+    D = abs(X[c] - X[r]).squeeze()
+    D = np.sqrt(np.sum(D**2, axis=1))
+    return D
 
 
 def diagmat_triu_idx(M, n, k=0):
