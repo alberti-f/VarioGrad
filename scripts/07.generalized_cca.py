@@ -118,7 +118,8 @@ if index == data.N-1:
 
         print("\tProjecting individual embeddings onto group SVDs")
         GCCA = {f"GCCA_r{r_svd}": np.zeros([data.N, vinfo[f"gray{h.lower()}"].size, rank_gcca])}
-        for ID in data.subj_list: 
+
+        for ID in data.subj_list:
             subj = subject(ID)
 
             idx_start = subj.idx * r_svd
@@ -142,9 +143,6 @@ if index == data.N-1:
             GCCA[f"GCCA_r{r_svd}"][subj.idx] = Xfit = X @ A
 
         npz_update(data.outpath(f'All.{h}.embeddings.npz'), GCCA)
-
-    data.allign_embeddings("L", alg="GCCA")
-    data.allign_embeddings("R", alg="GCCA")
 
     for ID in data.subj_list:
         os.remove(subject(ID).outpath(f"{ID}.L.svd.npz"))

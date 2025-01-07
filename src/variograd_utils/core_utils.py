@@ -205,35 +205,6 @@ class dataset:
         setattr(self, f"embeds_{h}", embeddings)
 
 
-    def align_embeddings(self, h=None, alg=None, overwrite=True):
-        """
-        Align embeddings by flipping signs for consistency.
-
-        Parameters
-        ----------
-        h : str or list of str, optional
-            Hemisphere(s) to align ('L' or 'R'). Default is both.
-        alg : str or list of str, optional
-            Algorithm(s) for which to align embeddings. If None, aligns all embeddings.
-        overwrite : bool, optional
-            If True, overwrites existing aligned embeddings. Default is True.
-        """
-
-        h = [["L", "R"] if h is None else [h]][0]
-
-        for hemi in h:
-            embeddings = self.load_embeddings(hemi, alg)
-
-            for key, val in embeddings.items():
-                ref = val[0]
-
-                for v in val:
-                    inverted = vector_wise_corr(ref, v) < 0
-                    v[:,inverted] *= -1
-
-            npz_update(self.outpath(f"All.{hemi}.embeddings.npz"), embeddings)
-
-
     def generate_avg_surf(self, h, k=32, assign=False, save=True, filename=None):
         """
         Generate the average cortical surface mesh for a given hemisphere.
