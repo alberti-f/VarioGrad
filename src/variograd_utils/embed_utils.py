@@ -165,7 +165,7 @@ class JointEmbedding:
         R : np.ndarray
             Reference matrix.
         C : np.ndarray, optional
-            Correspondence matrix.
+            Correspondence matrix of shape (n_samples_M, n_samples_R).
             If affinity is not "precomputed", C is used as is and the
             specified affinity method is applied only to while M and R.
         affinity : str, optional
@@ -191,11 +191,11 @@ class JointEmbedding:
 
         else:
             if affinity == "precomputed":
-                A = np.block([[R, C],
-                              [C.T, M]])
+                A = np.block([[R, C.T],
+                              [C, M]])
             else:
-                A = np.block([[_affinity_matrix(R, method=affinity, scale=scale), C],
-                              [C.T, _affinity_matrix(M, method=affinity, scale=scale)]])
+                A = np.block([[_affinity_matrix(R, method=affinity, scale=scale), C.T],
+                              [C, _affinity_matrix(M, method=affinity, scale=scale)]])
 
         return A
 
@@ -561,3 +561,24 @@ def _laplacian(A, normalized=True):
         L = np.diag(D.squeeze()) - A         
 
     return L
+
+
+def _is_square(a):
+    """
+    Check if all elements in a NumPy array are the same.
+
+    Parameters
+    ----------
+    a : numpy.ndarray
+        The input array to check.
+
+    Returns
+    -------
+    bool
+        True if all dimensions of a are equal, False otherwise.
+    """
+    
+    shape_a = np.array(a.shape)
+    out = np.all(shape_a == shape_a[0]) if len(shape_a) > 1 else False
+    return out
+    
