@@ -345,6 +345,43 @@ def kernelize(A, kernel="linear", scale=None):
     return A
 
 
+def spectral_similarity(M, R, n_components=2, random_state=None):
+    """
+    Compute the spectral similarity between two matrices using Laplacian Eigenmaps and Procrustes alignment.
+
+    This function calculates the cosine similarity between Laplacian Eigenmaps of two matrices, 
+    `M` and `R` of shape observations x features. The embeddings are aligned using 
+    the Orthogonal Procrustes transformation before computing similarity.
+
+    Parameters
+    ----------
+    M : numpy.ndarray
+        The first input matrix.
+    R : numpy.ndarray
+        The second input matrix (also target of the procrustes alignment).
+    n_components : int, optional
+        Number of dimensions for the Laplacian Eigenmap embeddings. Default is 2.
+    random_state : int, optional
+        Determines random number generation for eigenmap embedding. Default is None.
+
+    Returns
+    -------
+    numpy.ndarray
+        A cosine similarity matrix representing the similarity between aligned 
+        embeddings of `M` and `R`.
+    """
+    
+    embedding_M, _, _ = laplacian_eigenmap(M, n_components=n_components, normalized=True, random_state=random_state)
+    embedding_R, _, _ = laplacian_eigenmap(R, n_components=n_components, normalized=True, random_state=random_state)
+    
+    rotation, scaling = orthogonal_procrustes(embedding_M, embedding_R)
+    embedding_M = np.dot(embedding_M, rotation) * scaling
+
+    A = euclidean_distances(embedding_M, embedding_R) ** -2
+
+    return A
+
+
 def diffusion_map_embedding(A, n_components=2, alpha=0.5, diffusion_time=1, random_state=None):
     """
     Computes the joint diffusion map embedding of an adjaciency matrix.
