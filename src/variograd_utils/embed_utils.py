@@ -384,7 +384,7 @@ def spectral_affinity(M, R, n_components=2, random_state=None):
     rotation, scaling = orthogonal_procrustes(embedding_M, embedding_R)
     embedding_M = np.dot(embedding_M, rotation) * scaling
 
-    A = euclidean_distances(embedding_M, embedding_R) ** -2
+    A = cosine_similarity(embedding_M, embedding_R) ** 2
 
     return A
 
