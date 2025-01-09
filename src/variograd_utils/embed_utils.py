@@ -54,13 +54,12 @@ class JointEmbedding:
     --------
     fit_transform(M, R, C=None, affinity="cosine", scale=None, method_kwargs=None)
         Compute the joint embedding of M and R using the specified method.
-    _joint_adjacency_matrix(M, R, C=None, affinity="cosine", scale=None)
-        Computes the joint adjacency matrix.
+    _joint_affinity_matrix(M, R, C=None, affinity="cosine", scale=None)
+        Computes the joint affinity matrix.
     _align_embeddings(embedding, joint_reference, independent_reference, method="rotation")
         Align the joint embedding with the independently computed reference embedding.
     _affinity_matrix(M, method="cosine", scale=None)
         Compute the joint affinity matrix of the input data.
-    kernelize(A, kernel="linear", scale=None)
     """
 
     def __init__(self, method="dme", n_components=2, alignment=None,
@@ -96,7 +95,7 @@ class JointEmbedding:
             - "cauchy": Cauchy kernel
             - "gauss": Gaussian kernel
             - "precomputed": precomputed affinity matrix.
-                            In this case, M and R are assumed to be adjaciency matrices
+                            In this case, M and R are assumed to be affinity matrices
                             and a correspondence matrix C must be specified.
         scale : float, optional
             The scaling parameter for the kernel methods.
@@ -119,8 +118,8 @@ class JointEmbedding:
         """
 
         if (affinity == "precomputed") & (C is None):
-            raise ValueError("Precomputed affinity assumes M and R are already adjaciency matrices,"
-                             + "so a correspondance adjaciency matrx C must be specified too.")
+            raise ValueError("Precomputed affinity assumes M and R are already affinity matrices,"
+                             + "so a correspondance affinity matrx C must be specified too.")
         n = M.shape[0]
 
         R = np.array(R, copy=self.copy)
@@ -128,7 +127,7 @@ class JointEmbedding:
         if C is not None:
             C = np.array(C, copy=self.copy)
 
-        A = self._joint_adjacency_matrix(M, R, C=C, affinity=affinity, scale=scale)
+        A = self._joint_affinity_matrix(M, R, C=C, affinity=affinity, scale=scale)
 
         method_kwargs = {} if method_kwargs is None else method_kwargs
         embedding_function = diffusion_map_embedding if self.method == "dme" else laplacian_eigenmap
@@ -155,9 +154,9 @@ class JointEmbedding:
         return embedding_M, embedding_R
 
 
-    def _joint_adjacency_matrix(self, M, R, C=None, affinity="cosine", scale=None):
+    def _joint_affinity_matrix(self, M, R, C=None, affinity="cosine", scale=None):
         """
-        Computes the joint adjacency matrix.
+        Computes the joint affinity matrix.
 
         Parameters:
         ----------
@@ -183,7 +182,7 @@ class JointEmbedding:
         Returns:
         -------
         A : np.ndarray
-            The joint adjacency matrix.
+            The joint affinity matrix.
         """
 
         if C is None:
@@ -300,7 +299,7 @@ def _affinity_matrix(M, method="cosine", scale=None):
 
     elif method in {"linear", "cauchy", "gauss"}:
         A = euclidean_distances(M)
-        A = kernelize(A, kernel=method, scale=scale)
+        A = kernel_affinity(A, kernel=method, scale=scale)
 
     else:
         raise ValueError("Unknown affinity method")
@@ -308,7 +307,7 @@ def _affinity_matrix(M, method="cosine", scale=None):
     return A
 
 
-def kernelize(A, kernel="linear", scale=None):
+def kernel_affinity(A, kernel="linear", scale=None):
     """
     Apply kernel to a matrix A
 
@@ -345,7 +344,7 @@ def kernelize(A, kernel="linear", scale=None):
     return A
 
 
-def spectral_similarity(M, R, n_components=2, random_state=None):
+def spectral_affinity(M, R, n_components=2, random_state=None):
     """
     Compute the spectral similarity between two matrices using Laplacian Eigenmaps and Procrustes alignment.
 
@@ -384,7 +383,7 @@ def spectral_similarity(M, R, n_components=2, random_state=None):
 
 def diffusion_map_embedding(A, n_components=2, alpha=0.5, diffusion_time=1, random_state=None):
     """
-    Computes the joint diffusion map embedding of an adjaciency matrix.
+    Computes the joint diffusion map embedding of an affinity matrix.
 
     Parameters:
     ----------
@@ -407,7 +406,7 @@ def diffusion_map_embedding(A, n_components=2, alpha=0.5, diffusion_time=1, rand
     """
 
     if np.any(A < 0):
-        warnings.warn("Negative values in the adjaciency matrix set to 0", RuntimeWarning)
+        warnings.warn("Negative values in the affinity matrix set to 0", RuntimeWarning)
         A[A<0] = 0
 
     L = _random_walk_laplacian(A, alpha=alpha)
@@ -497,7 +496,7 @@ def _random_walk_laplacian(A, alpha=0.5):
 
 def laplacian_eigenmap(A, n_components=2, normalized=True, random_state=None):
     """
-    Computes the spectral embedding of an adjaciency matrix.
+    Computes the spectral embedding of an affinity matrix.
 
     Parameters:
     ----------
@@ -517,7 +516,7 @@ def laplacian_eigenmap(A, n_components=2, normalized=True, random_state=None):
     """
 
     if np.any(A < 0):
-        warnings.warn("Negative values in the adjaciency matrix set to 0", RuntimeWarning)
+        warnings.warn("Negative values in the affinity matrix set to 0", RuntimeWarning)
         A[A<0] = 0
 
     L = _laplacian(A, normalized=normalized)
