@@ -186,8 +186,16 @@ class JointEmbedding:
         """
 
         if C is None:
-            A = np.vstack([R, M])
-            A = _affinity_matrix(A, method=affinity, scale=scale)
+            if affinity in ["cosine", "correlation"]:
+                A = np.vstack([R, M])
+                A = _affinity_matrix(A, method=affinity, scale=scale)
+
+            elif affinity in ["linear", "cauchy", "gauss"]:
+                C = euclidean_distances(M, R)
+                scale_C = np.percentile(C, 100 * np.sum(t > R) / R.size)
+                C = kernel_affinity(C, kernel=affinity, scale=scale_C)
+                A = np.block([[_affinity_matrix(R, method=affinity, scale=scale), C.T],
+                              [C, _affinity_matrix(M, method=affinity, scale=scale)]])
 
         else:
             if affinity == "precomputed":
@@ -298,7 +306,7 @@ def _affinity_matrix(M, method="cosine", scale=None):
         A = np.corrcoef(M)
 
     elif method in {"linear", "cauchy", "gauss"}:
-        A = euclidean_distances(M)
+        # A = M if _is_square(M) else euclidean_distances(M)
         A = kernel_affinity(A, kernel=method, scale=scale)
 
     else:
@@ -561,24 +569,3 @@ def _laplacian(A, normalized=True):
         L = np.diag(D.squeeze()) - A         
 
     return L
-
-
-def _is_square(a):
-    """
-    Check if all elements in a NumPy array are the same.
-
-    Parameters
-    ----------
-    a : numpy.ndarray
-        The input array to check.
-
-    Returns
-    -------
-    bool
-        True if all dimensions of a are equal, False otherwise.
-    """
-    
-    shape_a = np.array(a.shape)
-    out = np.all(shape_a == shape_a[0]) if len(shape_a) > 1 else False
-    return out
-    
