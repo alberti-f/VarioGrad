@@ -266,9 +266,9 @@ class JointEmbedding:
         joint_reference = np.dot(joint_reference, R) * s
         embedding = np.dot(embedding, R) * s
 
-        independent_reference /= np.linalg.norm(independent_reference)
-        joint_reference /= np.linalg.norm(joint_reference)
-        embedding /= np.linalg.norm(embedding)
+        # independent_reference /= np.linalg.norm(independent_reference)
+        # joint_reference /= np.linalg.norm(joint_reference)
+        # embedding /= np.linalg.norm(embedding)
 
         return embedding, joint_reference
 
