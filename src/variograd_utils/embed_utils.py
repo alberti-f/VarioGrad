@@ -380,11 +380,16 @@ def spectral_affinity(M, R, n_components=2, random_state=None):
     
     embedding_M, _, _ = laplacian_eigenmap(M, n_components=n_components, normalized=True, random_state=random_state)
     embedding_R, _, _ = laplacian_eigenmap(R, n_components=n_components, normalized=True, random_state=random_state)
-    
+
+    embedding_M -= embedding_M.mean(axis=0)
+    embedding_M /= np.linalg.norm(embedding_M)
+    embedding_R -= embedding_R.mean(axis=0)
+    embedding_R /= np.linalg.norm(embedding_R)
+
     rotation, scaling = orthogonal_procrustes(embedding_M, embedding_R)
     embedding_M = np.dot(embedding_M, rotation) * scaling
 
-    A = cosine_similarity(embedding_M, embedding_R) ** 2
+    A = cosine_similarity(embedding_M, embedding_R)
 
     return A
 
