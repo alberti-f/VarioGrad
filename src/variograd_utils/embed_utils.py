@@ -419,7 +419,9 @@ def diffusion_map_embedding(A, n_components=2, alpha=0.5, diffusion_time=1, rand
     """
 
     if np.any(A < 0):
-        warnings.warn("Negative values in the affinity matrix set to 0", RuntimeWarning)
+        warnings.warn(f"{np.sum(A < 0)} negative values in the affinity matrix set to 0. "
+                      + f"Mean negative value: {np.mean(A[A < 0])}({np.std(A[A < 0])})",
+                      RuntimeWarning)
         A[A<0] = 0
 
     L = _random_walk_laplacian(A, alpha=alpha)
@@ -529,7 +531,9 @@ def laplacian_eigenmap(A, n_components=2, normalized=True, random_state=None):
     """
 
     if np.any(A < 0):
-        warnings.warn("Negative values in the affinity matrix set to 0", RuntimeWarning)
+        warnings.warn(f"{np.sum(A < 0)} negative values in the affinity matrix set to 0. "
+                      + f"Mean negative value: {np.mean(A[A < 0])}({np.std(A[A < 0])})",
+                      RuntimeWarning)
         A[A<0] = 0
 
     L = _laplacian(A, normalized=normalized)
