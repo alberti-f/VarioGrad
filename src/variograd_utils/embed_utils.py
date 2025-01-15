@@ -230,38 +230,23 @@ class JointEmbedding:
 
         """
 
-        independent_reference -= independent_reference.mean(axis=0)
-        joint_reference -= joint_reference.mean(axis=0)
-        embedding -= embedding.mean(axis=0)
-
-        independent_reference /= np.linalg.norm(independent_reference)
-        joint_reference /= np.linalg.norm(joint_reference)
-        embedding /= np.linalg.norm(embedding)
-
         s = 1
         if method == "sign_flip":
             to_flip = vector_wise_corr(embedding.copy(), independent_reference.copy()) < 0
             R = np.diag([-1 if i else 1 for i in to_flip])
 
-        elif method == "rotation":
-            R, _ = orthogonal_procrustes(joint_reference, independent_reference)
-
         elif method == "dot_product":
-            # raise NotImplementedError("Dot product rotation not implemented")
-            R = np.dot(joint_reference.T, independent_reference)
+            R = dot_product_rotation(joint_reference.copy(), independent_reference.copy())
 
-        elif method == "procrustes":
-            R, s = orthogonal_procrustes(joint_reference, independent_reference)
+        elif method in ["rotation", "procrustes"]:
+            R, s = procrustes_rotation(joint_reference.copy(), independent_reference.copy())
+            s = 1 if method == "rotation" else 1
 
         else:
             raise ValueError(f"Unknown alignment method: {self.alignment}")
 
         joint_reference = np.dot(joint_reference, R) * s
         embedding = np.dot(embedding, R) * s
-
-        independent_reference /= np.linalg.norm(independent_reference)
-        joint_reference /= np.linalg.norm(joint_reference)
-        embedding /= np.linalg.norm(embedding)
 
         return embedding, joint_reference
 
@@ -525,3 +510,20 @@ def _laplacian(A, normalized=True):
         L = np.diag(D.squeeze()) - A         
 
     return L
+
+
+def dot_product_rotation(M, R):
+    R -= R.mean(axis=1, keepdims=True)
+    M -= M.mean(axis=1, keepdims=True)
+    R /= np.linalg.norm(R, axis=1, keepdims=True)
+    M /= np.linalg.norm(M, axis=1, keepdims=True)
+    R = np.dot(M.T, R)
+    return R
+
+
+def procrustes_rotation(M, R):
+    R -= R.mean(axis=0)
+    R /= np.linalg.norm(R)
+    M -= M.mean(axis=0)
+    M /= np.linalg.norm(M)
+    return orthogonal_procrustes(M, R)
