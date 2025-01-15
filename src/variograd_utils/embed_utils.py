@@ -191,9 +191,11 @@ class JointEmbedding:
                 A = _affinity_matrix(A, method=affinity, scale=scale)
 
             elif affinity in ["linear", "cauchy", "gauss"]:
-                C = pseudo_sqrt(np.dot(M, R), n_components=100)
-                A = np.block([[_affinity_matrix(R, method=affinity, scale=scale), C.T],
-                              [C, _affinity_matrix(M, method=affinity, scale=scale)]])
+                M_aff = _affinity_matrix(M, method=affinity, scale=scale)
+                R_aff = _affinity_matrix(R, method=affinity, scale=scale)
+                C = pseudo_sqrt(np.dot(M_aff, R_aff), n_components=100)
+                A = np.block([[R_aff, C.T],
+                              [C, M_aff]])
 
         else:
             if affinity == "precomputed":
