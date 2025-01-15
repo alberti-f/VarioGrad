@@ -191,9 +191,7 @@ class JointEmbedding:
                 A = _affinity_matrix(A, method=affinity, scale=scale)
 
             elif affinity in ["linear", "cauchy", "gauss"]:
-                C = euclidean_distances(M, R)
-                scale_C = np.percentile(C, 100 * np.sum(t > R) / R.size)
-                C = kernel_affinity(C, kernel=affinity, scale=scale_C)
+                C = pseudo_sqrt(np.dot(M, R), n_components=100)
                 A = np.block([[_affinity_matrix(R, method=affinity, scale=scale), C.T],
                               [C, _affinity_matrix(M, method=affinity, scale=scale)]])
 
@@ -578,3 +576,18 @@ def _laplacian(A, normalized=True):
         L = np.diag(D.squeeze()) - A         
 
     return L
+
+
+def pseudo_sqrt(X, n_components = 100):
+    
+    if np.any(X != X.T):
+        X = (X + X.T) / 2
+
+    svd = TruncatedSVD(n_components=n_components)
+    svd.fit(X)
+    U = svd.components_.T
+    S = np.diag(svd.singular_values_)
+    Ssqrt = S ** .5
+    
+    return np.dot(np.dot(U, Ssqrt), U.T)
+
