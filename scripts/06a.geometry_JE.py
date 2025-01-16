@@ -47,7 +47,7 @@ import sys
 import psutil
 import numpy as np
 from variograd_utils.core_utils import dataset, subject, npz_update
-from variograd_utils.embed_utils import JointEmbedding, kernelize, pseudo_sqrt
+from variograd_utils.embed_utils import JointEmbedding, kernel_affinity, pseudo_sqrt
 
 index = int(sys.argv[1])-1
 
@@ -83,10 +83,10 @@ for h in hemi:
         print(f"\n\nParameter combinaiton {n+1}/{len(params)}\tkey:", key, "\n")
         process = psutil.Process()
 
-        Radj = R.copy() if k is None else kernelize(R.copy(), kernel=k, scale=s)
-        Madj = M.copy() if k is None else kernelize(M.copy(), kernel=k, scale=s)
-        Cadj = pseudo_sqrt(np.dot(Maff, Raff), n_components=100)
-        # Cadj = C.copy() if k is None else kernelize(C.copy(), kernel=k, scale=s)
+        Radj = R.copy() if k is None else kernel_affinity(R.copy(), kernel=k, scale=s)
+        Madj = M.copy() if k is None else kernel_affinity(M.copy(), kernel=k, scale=s)
+        Cadj = pseudo_sqrt(np.dot(Madj, Radj), n_components=100)
+        # Cadj = C.copy() if k is None else kernel_affinity(C.copy(), kernel=k, scale=s)
 
         je = JointEmbedding(method=je_method,
                             n_components=n_components,
