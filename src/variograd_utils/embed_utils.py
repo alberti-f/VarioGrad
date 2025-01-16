@@ -54,13 +54,12 @@ class JointEmbedding:
     --------
     fit_transform(M, R, C=None, affinity="cosine", scale=None, method_kwargs=None)
         Compute the joint embedding of M and R using the specified method.
-    _joint_adjacency_matrix(M, R, C=None, affinity="cosine", scale=None)
-        Computes the joint adjacency matrix.
+    _joint_affinity_matrix(M, R, C=None, affinity="cosine", scale=None)
+        Computes the joint affinity matrix.
     _align_embeddings(embedding, joint_reference, independent_reference, method="rotation")
         Align the joint embedding with the independently computed reference embedding.
     _affinity_matrix(M, method="cosine", scale=None)
         Compute the joint affinity matrix of the input data.
-    kernelize(A, kernel="linear", scale=None)
     """
 
     def __init__(self, method="dme", n_components=2, alignment=None,
@@ -96,7 +95,7 @@ class JointEmbedding:
             - "cauchy": Cauchy kernel
             - "gauss": Gaussian kernel
             - "precomputed": precomputed affinity matrix.
-                            In this case, M and R are assumed to be adjaciency matrices
+                            In this case, M and R are assumed to be affinity matrices
                             and a correspondence matrix C must be specified.
         scale : float, optional
             The scaling parameter for the kernel methods.
@@ -119,8 +118,8 @@ class JointEmbedding:
         """
 
         if (affinity == "precomputed") & (C is None):
-            raise ValueError("Precomputed affinity assumes M and R are already adjaciency matrices,"
-                             + "so a correspondance adjaciency matrx C must be specified too.")
+            raise ValueError("Precomputed affinity assumes M and R are already affinity matrices,"
+                             + "so a correspondance affinity matrx C must be specified too.")
         n = M.shape[0]
 
         R = np.array(R, copy=self.copy)
@@ -128,7 +127,7 @@ class JointEmbedding:
         if C is not None:
             C = np.array(C, copy=self.copy)
 
-        A = self._joint_adjacency_matrix(M, R, C=C, affinity=affinity, scale=scale)
+        A = self._joint_affinity_matrix(M, R, C=C, affinity=affinity, scale=scale)
 
         method_kwargs = {} if method_kwargs is None else method_kwargs
         embedding_function = diffusion_map_embedding if self.method == "dme" else laplacian_eigenmap
@@ -155,9 +154,9 @@ class JointEmbedding:
         return embedding_M, embedding_R
 
 
-    def _joint_adjacency_matrix(self, M, R, C=None, affinity="cosine", scale=None):
+    def _joint_affinity_matrix(self, M, R, C=None, affinity="cosine", scale=None):
         """
-        Computes the joint adjacency matrix.
+        Computes the joint affinity matrix.
 
         Parameters:
         ----------
@@ -166,7 +165,7 @@ class JointEmbedding:
         R : np.ndarray
             Reference matrix.
         C : np.ndarray, optional
-            Correspondence matrix.
+            Correspondence matrix of shape (n_samples_M, n_samples_R).
             If affinity is not "precomputed", C is used as is and the
             specified affinity method is applied only to while M and R.
         affinity : str, optional
@@ -183,20 +182,28 @@ class JointEmbedding:
         Returns:
         -------
         A : np.ndarray
-            The joint adjacency matrix.
+            The joint affinity matrix.
         """
 
         if C is None:
-            A = np.vstack([R, M])
-            A = _affinity_matrix(A, method=affinity, scale=scale)
+            if affinity in ["cosine", "correlation"]:
+                A = np.vstack([R, M])
+                A = _affinity_matrix(A, method=affinity, scale=scale)
+
+            elif affinity in ["linear", "cauchy", "gauss"]:
+                M_aff = _affinity_matrix(M, method=affinity, scale=scale)
+                R_aff = _affinity_matrix(R, method=affinity, scale=scale)
+                C = pseudo_sqrt(np.dot(M_aff, R_aff), n_components=100)
+                A = np.block([[R_aff, C.T],
+                              [C, M_aff]])
 
         else:
             if affinity == "precomputed":
-                A = np.block([[R, C],
-                              [C.T, M]])
+                A = np.block([[R, C.T],
+                              [C, M]])
             else:
-                A = np.block([[_affinity_matrix(R, method=affinity, scale=scale), C],
-                              [C.T, _affinity_matrix(M, method=affinity, scale=scale)]])
+                A = np.block([[_affinity_matrix(R, method=affinity, scale=scale), C.T],
+                              [C, _affinity_matrix(M, method=affinity, scale=scale)]])
 
         return A
 
@@ -248,6 +255,7 @@ class JointEmbedding:
         joint_reference = np.dot(joint_reference, R) * s
         embedding = np.dot(embedding, R) * s
 
+
         return embedding, joint_reference
 
 
@@ -284,8 +292,8 @@ def _affinity_matrix(M, method="cosine", scale=None):
         A = np.corrcoef(M)
 
     elif method in {"linear", "cauchy", "gauss"}:
-        A = euclidean_distances(M)
-        A = kernelize(A, kernel=method, scale=scale)
+        # A = M if _is_square(M) else euclidean_distances(M)
+        A = kernel_affinity(A, kernel=method, scale=scale)
 
     else:
         raise ValueError("Unknown affinity method")
@@ -293,7 +301,7 @@ def _affinity_matrix(M, method="cosine", scale=None):
     return A
 
 
-def kernelize(A, kernel="linear", scale=None):
+def kernel_affinity(A, kernel="linear", scale=None):
     """
     Apply kernel to a matrix A
 
@@ -330,9 +338,51 @@ def kernelize(A, kernel="linear", scale=None):
     return A
 
 
+def spectral_affinity(M, R, n_components=2, random_state=None):
+    """
+    Compute the spectral similarity between two matrices using Laplacian Eigenmaps and Procrustes alignment.
+
+    This function calculates the cosine similarity between Laplacian Eigenmaps of two matrices, 
+    `M` and `R` of shape observations x features. The embeddings are aligned using 
+    the Orthogonal Procrustes transformation before computing similarity.
+
+    Parameters
+    ----------
+    M : numpy.ndarray
+        The first input matrix.
+    R : numpy.ndarray
+        The second input matrix (also target of the procrustes alignment).
+    n_components : int, optional
+        Number of dimensions for the Laplacian Eigenmap embeddings. Default is 2.
+    random_state : int, optional
+        Determines random number generation for eigenmap embedding. Default is None.
+
+    Returns
+    -------
+    numpy.ndarray
+        A cosine similarity matrix representing the similarity between aligned 
+        embeddings of `M` and `R`.
+    """
+    
+    embedding_M, _, _ = laplacian_eigenmap(M, n_components=n_components, normalized=True, random_state=random_state)
+    embedding_R, _, _ = laplacian_eigenmap(R, n_components=n_components, normalized=True, random_state=random_state)
+
+    embedding_M -= embedding_M.mean(axis=0)
+    embedding_M /= np.linalg.norm(embedding_M)
+    embedding_R -= embedding_R.mean(axis=0)
+    embedding_R /= np.linalg.norm(embedding_R)
+
+    rotation, scaling = orthogonal_procrustes(embedding_M, embedding_R)
+    embedding_M = np.dot(embedding_M, rotation) * scaling
+
+    A = cosine_similarity(embedding_M, embedding_R)
+
+    return A
+
+
 def diffusion_map_embedding(A, n_components=2, alpha=0.5, diffusion_time=1, random_state=None):
     """
-    Computes the joint diffusion map embedding of an adjaciency matrix.
+    Computes the joint diffusion map embedding of an affinity matrix.
 
     Parameters:
     ----------
@@ -355,7 +405,9 @@ def diffusion_map_embedding(A, n_components=2, alpha=0.5, diffusion_time=1, rand
     """
 
     if np.any(A < 0):
-        warnings.warn("Negative values in the adjaciency matrix set to 0", RuntimeWarning)
+        warnings.warn(f"{np.sum(A < 0)} negative values in the affinity matrix set to 0. "
+                      + f"Mean negative value: {np.mean(A[A < 0])}({np.std(A[A < 0])})",
+                      RuntimeWarning)
         A[A<0] = 0
 
     L = _random_walk_laplacian(A, alpha=alpha)
@@ -427,7 +479,7 @@ def _random_walk_laplacian(A, alpha=0.5):
         The random walk Laplacian of A.
     """
 
-    if (A.shape[0] != A.shape[1]) or not np.array_equal(A, A.T):
+    if (A.shape[0] != A.shape[1]) or not np.allclose(A, A.T):
         raise ValueError("A must be a squared, symmetrical affinity matrix.")
 
     # Compute the normalized Laplacian
@@ -445,7 +497,7 @@ def _random_walk_laplacian(A, alpha=0.5):
 
 def laplacian_eigenmap(A, n_components=2, normalized=True, random_state=None):
     """
-    Computes the spectral embedding of an adjaciency matrix.
+    Computes the spectral embedding of an affinity matrix.
 
     Parameters:
     ----------
@@ -465,7 +517,9 @@ def laplacian_eigenmap(A, n_components=2, normalized=True, random_state=None):
     """
 
     if np.any(A < 0):
-        warnings.warn("Negative values in the adjaciency matrix set to 0", RuntimeWarning)
+        warnings.warn(f"{np.sum(A < 0)} negative values in the affinity matrix set to 0. "
+                      + f"Mean negative value: {np.mean(A[A < 0])}({np.std(A[A < 0])})",
+                      RuntimeWarning)
         A[A<0] = 0
 
     L = _laplacian(A, normalized=normalized)
@@ -496,7 +550,7 @@ def _laplacian(A, normalized=True):
         Laplacian matrix of M.
     """
 
-    if (A.shape[0] != A.shape[1]) or not np.array_equal(A, A.T):
+    if (A.shape[0] != A.shape[1]) or not np.allclose(A, A.T):
         raise ValueError("A must be a squared, symmetrical affinity matrix.")
 
     # Calculate degree
@@ -510,6 +564,20 @@ def _laplacian(A, normalized=True):
         L = np.diag(D.squeeze()) - A         
 
     return L
+
+
+def pseudo_sqrt(X, n_components = 100):
+    
+    if np.any(X != X.T):
+        X = (X + X.T) / 2
+
+    svd = TruncatedSVD(n_components=n_components)
+    svd.fit(X)
+    U = svd.components_.T
+    S = np.diag(svd.singular_values_)
+    Ssqrt = S ** .5
+    
+    return np.dot(np.dot(U, Ssqrt), U.T)
 
 
 def dot_product_rotation(M, R):
@@ -527,3 +595,4 @@ def procrustes_rotation(M, R):
     M -= M.mean(axis=0)
     M /= np.linalg.norm(M)
     return orthogonal_procrustes(M, R)
+
