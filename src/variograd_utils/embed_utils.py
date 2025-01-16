@@ -247,7 +247,7 @@ class JointEmbedding:
 
         elif method in ["rotation", "procrustes"]:
             R, s = procrustes_rotation(joint_reference.copy(), independent_reference.copy())
-            s = 1 if method == "rotation" else 1
+            s = 1 if method == "rotation" else s
 
         else:
             raise ValueError(f"Unknown alignment method: {self.alignment}")
@@ -261,12 +261,12 @@ class JointEmbedding:
 
 def _affinity_matrix(M, method="cosine", scale=None):
     """
-    Compute the affinity matrix between two matrices A and B
+    Convert a distance measure to affinity.
     
     Parameters
     ----------
     M : array-like
-        The input matrix of shape smaples x features
+        The input matrix of shape (samples, features)
     method : str
         The method to compute the affinity matrix. Options are:
         - "cosine": cosine similarity
@@ -398,10 +398,15 @@ def diffusion_map_embedding(A, n_components=2, alpha=0.5, diffusion_time=1, rand
     random_state: int, optional
         Random seed of the SVD.
     
-    Returns:
+    Returns
     -------
-    self : JointEmbedding
-        Fitted instance of JointEmbedding.
+    embedding : numpy.ndarray of shape (n_samples, n_components)
+        The diffusion map embedding computed from the random walk Laplacian.
+    vectors : numpy.ndarray of shape (n_samples, n_components)
+        The corresponding singular vectors (or eigenvectors) used for the embedding.
+    lambdas : numpy.ndarray of shape (n_components,)
+        The singular values (or eigenvalues) associated with the embedding.
+
     """
 
     if np.any(A < 0):
@@ -434,10 +439,14 @@ def _diffusion_map(L, n_components=2, diffusion_time=1, random_state=None):
     random_state: int, optional
         Random seed of the SVD.    
     
-    Returns:
+    Returns
     -------
-    L : np.ndarray
-        The reference Laplacian matrix.
+    embedding : numpy.ndarray of shape (n_samples, n_components)
+        The diffusion map embedding computed from the random walk Laplacian.
+    vectors : numpy.ndarray of shape (n_samples, n_components)
+        The corresponding singular vectors (or eigenvectors) used for the embedding.
+    lambdas : numpy.ndarray of shape (n_components,)
+        The singular values (or eigenvalues) associated with the embedding.
     """
 
     n_components = n_components + 1
@@ -510,10 +519,15 @@ def laplacian_eigenmap(A, n_components=2, normalized=True, random_state=None):
     random_state: int, optional
         Random seed of the SVD.
     
-    Returns:
+    Returns
     -------
-    self : JointEmbedding
-        Fitted instance of JointEmbedding.
+    embedding : numpy.ndarray of shape (n_samples, n_components)
+        The laplaician eigenmap embedding of L.
+    vectors : numpy.ndarray of shape (n_samples, n_components)
+        The corresponding singular vectors (or eigenvectors) used for the embedding.
+    lambdas : numpy.ndarray of shape (n_components,)
+        The singular values (or eigenvalues) associated with the embedding.
+
     """
 
     if np.any(A < 0):
@@ -557,42 +571,144 @@ def _laplacian(A, normalized=True):
     D = np.sum(A, axis=1).reshape(-1, 1)
 
     # Compute the Laplacian matrix
+    L = np.diag(D.squeeze()) - A 
+    
     if normalized:
-        L = -A / np.sqrt(D @ D.T)
-
-    else:
-        L = np.diag(D.squeeze()) - A         
+        D_inv_sqrt = np.diag(D ** -0.5)
+        L = (D_inv_sqrt @ L) @ D_inv_sqrt
 
     return L
 
 
-def pseudo_sqrt(X, n_components = 100):
-    
-    if np.any(X != X.T):
+def pseudo_sqrt(X, n_components=100):
+    """
+    Compute the pseudo-square root of a symmetric matrix.
+
+    This function computes a low-rank approximation of the pseudo-square root of 
+    a symmetric matrix using Singular Value Decomposition (SVD).
+
+    Parameters
+    ----------
+    X : numpy.ndarray
+        The input square matrix to compute the pseudo-square root for.
+    n_components : int, optional
+        The number of components to retain in the low-rank approximation. 
+        Default is 100.
+
+    Returns
+    -------
+    numpy.ndarray
+        The approximated symmetric pseudo-square root of the input matrix.
+
+    Notes
+    -----
+    - If `X` is not symmetric, it is symmetrized as `(X + X.T) / 2`.
+    - The pseudo-square root is computed as `U * sqrt(S) * U.T`, where `U` and `S` 
+    - The method assumes `X` has a valid SVD decomposition.
+
+    Raises
+    ------
+    ValueError
+        If the input matrix `X` is not square.
+
+    """
+
+    if (X.shape[0] != X.shape[1]) or (X.ndim != 2):
+        raise ValueError("Input matrix X must be square.")
+
+    if not np.allclose(X, X.T, atol=1e-10):
         X = (X + X.T) / 2
 
     svd = TruncatedSVD(n_components=n_components)
     svd.fit(X)
     U = svd.components_.T
     S = np.diag(svd.singular_values_)
-    Ssqrt = S ** .5
-    
+    Ssqrt = S ** 0.5
+
     return np.dot(np.dot(U, Ssqrt), U.T)
 
 
+
 def dot_product_rotation(M, R):
+    """
+    Compute the rotated dot product matrix between two datasets.
+
+    This function takes two matrices, `M` and `R`, and computes the roation matrix
+    necessary to align them using their dot product.
+
+    Parameters
+    ----------
+    M : numpy.ndarray
+        A 2D array of shape `(n_samples, n_features)`. The matrix to be rotated.
+    R : numpy.ndarray
+        A 2D array of shape `(n_samples, n_features)`. The target reference matrix.
+
+    Returns
+    -------
+    numpy.ndarray
+        A 2D array of shape `(n_features, n_features)`. The rotation matrix from M to R.
+
+    Notes
+    -----
+    - The input matrices `M` and `R` must have the same shape.
+    - This function normalizes each row (sample) to have unit norm, ensuring that the dot
+      product represents cosine similarity between the corresponding features.
+
+    Raises
+    ------
+    ValueError
+        If the shapes of `M` and `R` do not match, or if any row contains only zeros.
+    """
+    
+    if M.shape != R.shape:
+        raise ValueError("Input matrices M and R must have the same shape.")
+    if np.any(np.linalg.norm(M, axis=1) == 0) or np.any(np.linalg.norm(R, axis=1) == 0):
+        raise ValueError("Rows of M and R must not be all zeros.")
+
     R -= R.mean(axis=1, keepdims=True)
     M -= M.mean(axis=1, keepdims=True)
     R /= np.linalg.norm(R, axis=1, keepdims=True)
     M /= np.linalg.norm(M, axis=1, keepdims=True)
-    R = np.dot(M.T, R)
-    return R
+    rotation_mat = np.dot(M.T, R)
+    return rotation_mat
+
 
 
 def procrustes_rotation(M, R):
+    """
+    Compute the rotation matrix and scaling factor to align a matric M to a reference R
+    solving the orthogonal Procrustes problem. This is essentially a wrapper over 
+    scipy.linalg.orthogonal_procrustes() that includes the normalization step (see
+    scipy.spatial.procrustes()).
+
+    Parameters
+    ----------
+    M : numpy.ndarray
+        A 2D array of shape `(n_samples, n_features)`. The matrix to be rotated.
+    R : numpy.ndarray
+        A 2D array of shape `(n_samples, n_features)`. The target reference matrix.
+
+    Returns
+    -------
+    R : (N, N) ndarray
+        A 2D array of shape `(n_features, n_features)`. The rotation matrix from M to R.
+    scale : float
+        Sum of the singular values of ``A.conj().T @ B``.
+
+    Raises
+    ------
+    ValueError
+        If the shapes of `M` and `R` do not match, or if any row contains only zeros.
+    """
+
+    if M.shape != R.shape:
+        raise ValueError("Input matrices M and R must have the same shape.")
+    if np.any(np.linalg.norm(M, axis=1) == 0) or np.any(np.linalg.norm(R, axis=1) == 0):
+        raise ValueError("Rows of M and R must not be all zeros.")
+
     R -= R.mean(axis=0)
     R /= np.linalg.norm(R)
     M -= M.mean(axis=0)
     M /= np.linalg.norm(M)
-    return orthogonal_procrustes(M, R)
 
+    return orthogonal_procrustes(M, R)
