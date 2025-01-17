@@ -1,6 +1,7 @@
 # core_utils.py
 
-import os.path as os
+import os
+import json
 from itertools import combinations
 import numpy as np
 from sklearn.utils import Bunch
@@ -9,32 +10,83 @@ import hcp_utils as hcp
 import variograd_utils
 from variograd_utils.brain_utils import save_gifti, vertex_info_10k
 
-def create_bunch_from(A):
+
+def init_dataset(
+    dataset_id=None,
+    group_dir=None,
+    subj_dir=None,
+    output_dir=None,
+    mesh10k_dir=None,
+    subj_list=None
+):
     """
-    Create a `Bunch` object from various input types.
+    Create or update a dataset definition in a JSON file within the package directory.
 
     Parameters
     ----------
-    A : str, dict, or numpy.lib.npyio.NpzFile
-        The input to convert into a `Bunch`. Can be:
-        - A string representing the path to a `.npz` file.
-        - A dictionary containing key-value pairs.
-        - A `numpy.lib.npyio.NpzFile` object.
+    dataset_id : str, optional
+        Unique identifier for the dataset. If None or empty, an error is raised.
+    group_dir : str, optional
+        Directory containing group-level data.
+    subj_dir : str, optional
+        Directory containing subject-level data.
+    output_dir : str, optional
+        Directory for saving outputs.
+    mesh10k_dir : str, optional
+        Directory containing 10k-resolution meshes.
+    subj_list : str, optional
+        Path to the subject list file.
 
-    Returns
-    -------
-    sklearn.utils.Bunch
-        A `Bunch` object containing the key-value pairs from the input.
+    Raises
+    ------
+    ValueError
+        If dataset_id is not provided (None or empty).
+        If dataset_id is new and any of the required paths are missing.
     """
 
-    if isinstance(A, str):
-        return Bunch(**dict(np.load(A).items()))
-    elif isinstance(A, dict):
-        return Bunch(**A)
-    elif isinstance(A, np.lib.npyio.NpzFile):
-        return Bunch(**dict(A.items()))
+    arguments = locals()
+
+    # 1. Determine the package directory and JSON file path
+    pkg_path = os.path.dirname(variograd_utils.__file__)
+    json_path = os.path.join(pkg_path, 'directories.json')
+
+    # 2. Check if dataset_id is provided
+    if not dataset_id:
+        raise ValueError("You must provide a dataset_id.")
+
+    # 3. Load existing data (or start fresh if file doesn't exist)
+    if os.path.exists(json_path) and os.path.getsize(json_path) > 0:
+        with open(json_path, "r") as f:
+            data = json.load(f)
     else:
-        raise TypeError("'A' should be a dictionary, a numpy NpzFile, or the path to a NpzFile")
+        data = {}
+
+    # 4. Check if this is a new dataset ID
+    # return(locals())
+    required = ["group_dir", "subj_dir", "output_dir", "mesh10k_dir", "subj_list"]
+    is_new = dataset_id not in data
+    
+    if is_new:
+        # If it's new, ensure none of the important paths are missing
+        missing = [field for field in required if arguments[field] is None]
+        if missing:
+            raise ValueError(f"Missing  arguments required for creating a new dataset: "
+                             + ", ".join(missing))
+        data[dataset_id] = {field: arguments[field] for field in required}
+        
+    else:
+        data[dataset_id] = {field: (value if arguments[field] is None else arguments[field])
+                            for field, value in data[dataset_id].items()}
+
+    # 6. Write back to JSON
+    with open(json_path, "w") as f:
+        json.dump(data, f, indent=2)
+
+    # 7. Print info
+    if is_new:
+        print(f"New dataset '{dataset_id}' created in '{json_path}'.")
+    else:
+        print(f"Dataset '{dataset_id}' has been updated in '{json_path}'.")
 
 
 class dataset:
@@ -85,7 +137,7 @@ class dataset:
         Initialize the `dataset` object.
         """
 
-        pkg_path = os.dirname(variograd_utils.__file__)
+        pkg_path = os.path.dirname(variograd_utils.__file__)
         file = open(f'{pkg_path}/directories.txt','r')
         directories = {line.split("=")[0]: line.split("=")[1].replace("\n", "") for line in file}
         self.group_dir = directories["group_dir"]
@@ -131,7 +183,7 @@ class dataset:
         """
 
         filename = f"{self.output_dir}/{filename}"
-        if os.exists(filename) & (not replace):
+        if os.path.exists(filename) & (not replace):
             raise ValueError("This file already exists. Change 'filename' or set 'replace' to True")
         return filename
     
@@ -269,7 +321,7 @@ class dataset:
             raise TypeError("Please specify one hemisphere: 'L' or 'R'")
 
         filename = f"{self.output_dir}/{self.id}.{hemi}.gdist_triu.10k_fs_LR.npy"
-        if os.exists(filename):
+        if os.path.exists(filename):
             return np.load(filename)
         else:
             raise ValueError(f"{filename} does not exist, generate it and try again.")
@@ -348,7 +400,7 @@ class subject:
                                          dtype="object").T.reshape(-1, 4)
         for h, k, w, name in surf_args:
             path = f"{self.dir}/{w}/fsaverage_LR{k}k/{self.id}.{h}.{name}_MSMAll.{k}k_fs_LR.surf.gii"
-            if os.exists(path):
+            if os.path.exists(path):
                 setattr(self, f"{h}_{name}_{k}k_{w}",  path)
 
             path = self.outpath(f"{w}/fsaverage_LR{k}k/{self.id}.{h}.{name}_MSMAll.{k}k_fs_LR.surf.gii")
@@ -374,7 +426,7 @@ class subject:
         """
 
         filename = f"{dataset().output_dir}/{self.id}/{filename}"
-        if os.exists(filename) & (not replace):
+        if os.path.exists(filename) & (not replace):
             raise ValueError("This file already exists. Change 'filename' or set 'replace' to True")
         return filename
 
@@ -469,7 +521,7 @@ class subject:
             raise TypeError("Please specify one hemisphere: 'L' or 'R'")
         
         filename = f"{dataset().output_dir}/{self.id}.{hemi}.gdist_triu.10k_fs_LR.npy"
-        if os.exists(filename):
+        if os.path.exists(filename):
             return np.load(filename)
         else:
             raise ValueError(f"{filename} does not exist, generate it and try again.")
@@ -548,6 +600,32 @@ class subject:
         setattr(self, f"embeds_{h}", embeddings)
 
 
+def create_bunch_from(A):
+    """
+    Create a `Bunch` object from various input types.
+
+    Parameters
+    ----------
+    A : str, dict, or numpy.lib.npyio.NpzFile
+        The input to convert into a `Bunch`. Can be:
+        - A string representing the path to a `.npz` file.
+        - A dictionary containing key-value pairs.
+        - A `numpy.lib.npyio.NpzFile` object.
+
+    Returns
+    -------
+    sklearn.utils.Bunch
+        A `Bunch` object containing the key-value pairs from the input.
+    """
+
+    if isinstance(A, str):
+        return Bunch(**dict(np.load(A).items()))
+    elif isinstance(A, dict):
+        return Bunch(**A)
+    elif isinstance(A, np.lib.npyio.NpzFile):
+        return Bunch(**dict(A.items()))
+    else:
+        raise TypeError("'A' should be a dictionary, a numpy NpzFile, or the path to a NpzFile")
 
 
 # MISC
@@ -759,7 +837,7 @@ def npz_update(filename, items={}):
         Key-value pairs to update or add to the `.npz` file. Default is an empty dictionary.
     """
 
-    if os.exists(filename):
+    if os.path.exists(filename):
         npz = dict(np.load(filename))
         npz.update(items)
         np.savez(filename, **npz)
