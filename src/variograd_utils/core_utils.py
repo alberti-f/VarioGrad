@@ -95,7 +95,7 @@ class dataset:
       based on the dataset configuration.
     """
 
-    def __init__(self, dataset_id):
+    def __init__(self, dataset_id, **kwargs):
         """
         Initialize the `dataset` object with paths and attributes for a specific dataset.
 
@@ -106,6 +106,8 @@ class dataset:
         ----------
         dataset_id : str
             Unique identifier for the dataset in the JSON configuration file.
+        **kwargs : variogram_utils.core_utils.init_dataset() arguments.
+            **kwargs are used to locally override paths from the JSON file
     
         Attributes Initialized
         -----------------------
@@ -144,11 +146,12 @@ class dataset:
         pkg_path = os.path.dirname(variograd_utils.__file__)
         json_path = f'{pkg_path}/directories.json'
         with open(json_path, "r") as json_file:
-            directories = json.load(json_file)[dataset_id]
+            directories = json.load(json_file)
 
         if dataset_id not in directories.keys():
             raise ValueError("There is no datased with this ID. Use init_dataset() to add it first.")
 
+        directories = {**directories[dataset_id], **kwargs}
         for attribute, value in directories.items():
             setattr(self, attribute, value)
 
@@ -607,13 +610,8 @@ class subject:
         setattr(self, f"embeds_{h}", embeddings)
 
 
-def init_dataset(
-    dataset_id=None,
-    group_dir=None,
-    subj_dir=None,
-    output_dir=None,
-    mesh10k_dir=None,
-    subj_list=None
+def init_dataset(dataset_id=None, group_dir=None, subj_dir=None,
+                 output_dir=None, mesh10k_dir=None, subj_list=None
 ):
     """
     Create or update a dataset definition in a JSON file within the package directory.
