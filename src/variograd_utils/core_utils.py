@@ -415,7 +415,7 @@ class subject:
                 setattr(self, f"{h}_{name}_{k}k_{w}",  path)
 
             path = self.outpath(f"{w}/fsaverage_LR{k}k/{self.id}.{h}.{name}_MSMAll.{k}k_fs_LR.surf.gii")
-            if os.exists(path):
+            if os.path.exists(path):
                 setattr(self, f"{h}_{name}_{k}k_{w}",  path)
 
 
