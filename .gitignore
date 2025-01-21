@@ -17,6 +17,7 @@ run_analyses.sh
 
 # Ignore local paths file
 *directories.txt
+*.json
 
 # Ignore subject pairs file
 subject_pairs.txt

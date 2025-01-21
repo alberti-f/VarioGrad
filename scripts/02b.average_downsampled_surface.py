@@ -26,7 +26,7 @@ Outputs:
 
 """
 
-
+import sys
 from os.path import exists
 from subprocess import run
 import numpy as np
@@ -35,10 +35,12 @@ import surfdist as sd
 from variograd_utils import dataset
 from variograd_utils.brain_utils import vertex_info_10k, save_gifti
 
+dataset_id = str(sys.argv[1])
+
 # Generate average surface
 print("\n\nGenerating average group surface.")
 
-data = dataset()
+data = dataset(dataset_id)
 data.generate_avg_surf("L", 10)
 data.generate_avg_surf("R", 10)
 

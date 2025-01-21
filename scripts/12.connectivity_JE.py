@@ -47,11 +47,12 @@ from variograd_utils.core_utils import dataset, subject, npz_update
 from variograd_utils.brain_utils import vertex_info_10k
 from variograd_utils.embed_utils import JointEmbedding
 
+dataset_id = sys.argv[1]
+idx = int(sys.argv[2])-1
 
-idx = int(sys.argv[1])-1
-data = dataset()
+data = dataset(dataset_id)
 ID = data.subj_list[idx]
-subj = subject(ID)
+subj = subject(ID, data.id)
 cortex = np.hstack([vertex_info_10k.grayl, vertex_info_10k.grayr + vertex_info_10k.num_meshl])
 threshold = 95
 n_components = 100
@@ -66,7 +67,7 @@ R = np.load(data.outpath(f"{data.id}.REST_FC.10k_fs_LR.npy")
 R[R < np.percentile(R, threshold, axis=0)] = 0
 
 # Load individual timeseries, compute FC, and threshold
-M = nib.load(subject(subj.id).outpath(f"{subj.id}.rfMRI_REST_Atlas_MSMAll.10k_fs_LR.dtseries.nii")
+M = nib.load(subj.outpath(f"{subj.id}.rfMRI_REST_Atlas_MSMAll.10k_fs_LR.dtseries.nii")
             ).get_fdata().astype("float32")[:, cortex]
 M = np.corrcoef(M.T)
 M[M < np.percentile(M, threshold, axis=0)] = 0

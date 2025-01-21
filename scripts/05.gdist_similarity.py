@@ -27,15 +27,15 @@ Notes:
 
 """
 
-
+import sys
 from itertools import combinations
 import numpy as np
 from joblib import Parallel, delayed
 from sklearn.metrics.pairwise import euclidean_distances
 from variograd_utils import dataset, subject
 
-
-data =  dataset()
+dataset_id = str(sys.argv[1])
+data =  dataset(dataset_id)
 
 subj_pairs = list(combinations(data.subj_list, 2))
 
@@ -44,8 +44,8 @@ print("\n\nComputing the inter-subject similarity of vertex geodesic\n"
 
 # Left hemisphere
 gdist_L2_l = Parallel(n_jobs=-1)(
-    delayed(np.diag)(euclidean_distances(subject(i).load_gdist_matrix("L"),
-                                         subject(j).load_gdist_matrix("L")))
+    delayed(np.diag)(euclidean_distances(subject(i, data.id).load_gdist_matrix("L"),
+                                         subject(j, data.id).load_gdist_matrix("L")))
                                          for i, j in subj_pairs)
 filename = data.outpath("AllToAll.L.gdist_L2.npy")
 np.save(filename, np.asarray(gdist_L2_l).T)
@@ -54,8 +54,8 @@ print(f"Left hemisphere output saved at {filename} \n",
 
 # Right hemisphere
 gdist_L2_r = Parallel(n_jobs=-1)(delayed(np.diag)(
-    euclidean_distances(subject(i).load_gdist_matrix("R"),
-                        subject(j).load_gdist_matrix("R")))
+    euclidean_distances(subject(i, data.id).load_gdist_matrix("R"),
+                        subject(j, data.id).load_gdist_matrix("R")))
                         for i, j in subj_pairs)
 filename = data.outpath("AllToAll.R.gdist_L2.npy")
 np.save(filename, np.asarray(gdist_L2_r).T)

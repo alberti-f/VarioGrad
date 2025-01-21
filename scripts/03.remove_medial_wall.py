@@ -35,15 +35,16 @@ import surfdist as sd
 from variograd_utils import dataset, subject
 from variograd_utils.brain_utils import save_gifti, vertex_info_10k
 
-index = int(sys.argv[1])-1
+dataset_id = str(sys.argv[1])
+index = int(sys.argv[2])-1
 
-data = dataset()
+data = dataset(dataset_id)
 ID = data.subj_list[index]
 
 # removing medial wall from subj surface
 print("\n\nRemoving medial wall from subject surface.")
 for H in ["L", "R"]:
-    subj = subject(ID)
+    subj = subject(ID, data.id)
     full_surf = [darray.data for darray in subj.load_surf(H, 10).darrays]
     cortex_idx = vertex_info_10k[f"gray{H.lower()}"]
     cortex_surf = sd.utils.surf_keep_cortex(full_surf, cortex=cortex_idx)

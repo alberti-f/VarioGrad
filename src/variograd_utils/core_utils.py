@@ -1,6 +1,7 @@
 # core_utils.py
 
-import os.path as os
+import os
+import json
 from itertools import combinations
 import numpy as np
 from sklearn.utils import Bunch
@@ -9,37 +10,14 @@ import hcp_utils as hcp
 import variograd_utils
 from variograd_utils.brain_utils import save_gifti, vertex_info_10k
 
-def create_bunch_from(A):
-    """
-    Create a `Bunch` object from various input types.
-
-    Parameters
-    ----------
-    A : str, dict, or numpy.lib.npyio.NpzFile
-        The input to convert into a `Bunch`. Can be:
-        - A string representing the path to a `.npz` file.
-        - A dictionary containing key-value pairs.
-        - A `numpy.lib.npyio.NpzFile` object.
-
-    Returns
-    -------
-    sklearn.utils.Bunch
-        A `Bunch` object containing the key-value pairs from the input.
-    """
-
-    if isinstance(A, str):
-        return Bunch(**dict(np.load(A).items()))
-    elif isinstance(A, dict):
-        return Bunch(**A)
-    elif isinstance(A, np.lib.npyio.NpzFile):
-        return Bunch(**dict(A.items()))
-    else:
-        raise TypeError("'A' should be a dictionary, a numpy NpzFile, or the path to a NpzFile")
-
 
 class dataset:
     """
-    Manage group-level data and common operations.
+    Manage group-level data, subject-level data, and common operations for a specific dataset.
+
+    This class initializes a dataset object based on a JSON configuration file that 
+    contains paths for different datasets. It supports various operations for managing
+    and analyzing subject and group-level data.
 
     Attributes
     ----------
@@ -54,54 +32,138 @@ class dataset:
     mesh10k_dir : str
         Directory containing 10k-resolution meshes.
     subj_list : numpy.ndarray
-        List of subject IDs.
+        List of subject IDs loaded from the specified subject list file.
     N : int
         Number of subjects in the dataset.
     id : str
-        Identifier for the dataset.
+        Identifier for the dataset, typically based on the number of subjects (e.g., "{N}avg").
     pairs : list
         List of all subject pairs for pairwise computations.
+    L_midthickness_32k : str
+        Path to the left hemisphere 32k-resolution midthickness surface file.
+    R_midthickness_32k : str
+        Path to the right hemisphere 32k-resolution midthickness surface file.
+    L_cortex_midthickness_32k : str
+        Path to the left hemisphere 32k-resolution cortex midthickness surface file.
+    R_cortex_midthickness_32k : str
+        Path to the right hemisphere 32k-resolution cortex midthickness surface file.
+    L_midthickness_10k : str
+        Path to the left hemisphere 10k-resolution midthickness surface file.
+    R_midthickness_10k : str
+        Path to the right hemisphere 10k-resolution midthickness surface file.
+    L_cortex_midthickness_10k : str
+        Path to the left hemisphere 10k-resolution cortex midthickness surface file.
+    R_cortex_midthickness_10k : str
+        Path to the right hemisphere 10k-resolution cortex midthickness surface file.
+
+    Parameters
+    ----------
+    dataset_id : str
+        Identifier for the dataset. This must correspond to an entry in the JSON file
+        containing dataset-specific paths.
 
     Methods
     -------
     outpath(filename, replace=True)
         Generates an output file path, optionally checking for existing files.
     load_surf(h, k=32, type="midthickness", assign=True)
-        Loads the group average cortical surface.
+        Loads the group average cortical surface for the specified hemisphere and resolution.
     load_embeddings(h, alg=None, return_bunch=True)
-        Loads geometric embeddings.
+        Loads geometric embeddings for the specified hemisphere and algorithm.
     allign_embeddings(h=None, alg=None, overwrite=True)
         Aligns embeddings by flipping signs based on reference embeddings.
     generate_avg_surf(h, k=32, assign=False, save=True, filename=None)
-        Computes the average cortical surface for a hemisphere.
+        Computes the average cortical surface for a hemisphere and optionally saves it.
     load_gdist_triu(hemi=None)
-        Loads geodesic distances as a vector.
+        Loads geodesic distances as a vector for the specified hemisphere.
     load_gdist_matrix(hemi=None, D=0)
-        Reconstructs a geodesic distance matrix.
+        Reconstructs a geodesic distance matrix for the specified hemisphere.
+
+    Raises
+    ------
+    ValueError
+        If an unsupported resolution is specified for surface paths (only 10k and 32k are allowed).
+        If the dataset_id does not exist in the JSON file.
+
+    Notes
+    -----
+    - The JSON configuration file must exist in the module's directory and include an entry
+      for each dataset, containing the required paths: "group_dir", "subj_dir", "output_dir",
+      "mesh10k_dir", and "subj_list".
+    - Subject IDs are loaded from the "subj_list" path specified in the JSON file.
+    - Surface paths for midthickness and cortex midthickness meshes are dynamically generated
+      based on the dataset configuration.
     """
 
-    def __init__(self):
+    def __init__(self, dataset_id, **kwargs):
         """
-        Initialize the `dataset` object.
+        Initialize the `dataset` object with paths and attributes for a specific dataset.
+
+        This constructor reads dataset-specific paths a JSON file and dynamically generates
+        paths for surface files and computes basic subject-related attributes.
+    
+        Parameters
+        ----------
+        dataset_id : str
+            Unique identifier for the dataset in the JSON configuration file.
+        **kwargs : variogram_utils.core_utils.init_dataset() arguments.
+            **kwargs are used to locally override paths from the JSON file
+    
+        Attributes Initialized
+        -----------------------
+        group_dir : str
+            Directory containing group-level data, read from the JSON file.
+        subj_dir : str
+            Directory containing subject-level data, read from the JSON file.
+        output_dir : str
+            Directory for saving outputs, read from the JSON file.
+        utils_dir : str
+            Directory where the module is installed.
+        mesh10k_dir : str
+            Directory containing 10k-resolution meshes, read from the JSON file.
+        subj_list : numpy.ndarray
+            Array of subject IDs loaded from the path specified in the JSON file.
+        N : int
+            Number of subjects in the dataset, derived from the length of `subj_list`.
+        id : str
+            Dataset identifier, generated as "{N}avg", where `N` is the number of subjects.
+        pairs : list
+            List of all subject pairs for pairwise computations.
+        <surface_path_attributes> : str
+            Dynamically created attributes for surface file paths based on the dataset.
+    
+        Raises
+        ------
+        ValueError
+            If the provided `dataset_id` does not exist in the JSON file.
+    
+        Notes
+        -----
+        - The JSON file (`directories.json`) can be initialized and edited using init_dataset().
+        - Surface paths are dynamically generated and added as attributes.
         """
 
-        pkg_path = os.dirname(variograd_utils.__file__)
-        file = open(f'{pkg_path}/directories.txt','r')
-        directories = {line.split("=")[0]: line.split("=")[1].replace("\n", "") for line in file}
-        self.group_dir = directories["group_dir"]
-        self.subj_dir = directories["subj_dir"]
-        self.output_dir = directories["output_dir"]
-        self.utils_dir = f"{pkg_path}"
-        self.mesh10k_dir = directories["mesh10k_dir"]
+        pkg_path = os.path.dirname(variograd_utils.__file__)
+        json_path = f'{pkg_path}/directories.json'
+        with open(json_path, "r") as json_file:
+            directories = json.load(json_file)
 
-        self.subj_list = np.loadtxt(directories["subj_list"]).astype("int32")
+        if dataset_id not in directories.keys():
+            raise ValueError("There is no datased with this ID. Use init_dataset() to add it first.")
+
+        directories = {**directories[dataset_id], **kwargs}
+        for attribute, value in directories.items():
+            setattr(self, attribute, value)
+
+        self.subj_list = np.loadtxt(self.subj_list, dtype="int32")
         self.N = len(self.subj_list)
-        self.id = f"{self.N}avg"
+        self.id = dataset_id #f"{self.N}avg"
         self.pairs = list(combinations(self.subj_list, 2))
 
         surf_args = np.array(np.meshgrid(["L", "R"], [10, 32],
                                          ["midthickness", "cortex_midthickness"]),
                              dtype="object").T.reshape(-1, 3)
+
         for h, k, name in surf_args:
             if k==32:
                 path = f"{self.group_dir}/{self.id}.{h}.{name}_MSMAll.{k}k_fs_LR.surf.gii"
@@ -131,7 +193,7 @@ class dataset:
         """
 
         filename = f"{self.output_dir}/{filename}"
-        if os.exists(filename) & (not replace):
+        if os.path.exists(filename) & (not replace):
             raise ValueError("This file already exists. Change 'filename' or set 'replace' to True")
         return filename
     
@@ -228,12 +290,12 @@ class dataset:
             A list containing the averaged pointsets and triangles, if `assign` is True.
         """
 
-        pointsets, triangles = subject(self.subj_list[0]).load_surf(h, k=k).darrays
+        pointsets, triangles = subject(self.subj_list[0], self.id).load_surf(h, k=k).darrays
         pointsets = pointsets.data
         triangles = triangles.data
 
-        for id in self.subj_list[1:]:
-            pointsets += subject(id).load_surf(h, k=k).darrays[0].data
+        for ID in self.subj_list[1:]:
+            pointsets += subject(ID, self.id).load_surf(h, k=k).darrays[0].data
         pointsets /= self.N
 
         avg_surf = [pointsets, triangles]
@@ -269,7 +331,7 @@ class dataset:
             raise TypeError("Please specify one hemisphere: 'L' or 'R'")
 
         filename = f"{self.output_dir}/{self.id}.{hemi}.gdist_triu.10k_fs_LR.npy"
-        if os.exists(filename):
+        if os.path.exists(filename):
             return np.load(filename)
         else:
             raise ValueError(f"{filename} does not exist, generate it and try again.")
@@ -332,12 +394,13 @@ class subject:
         Loads embeddings for a subject.
     """
 
-    def __init__(self, ID=None):
+    def __init__(self, ID=None, dataset_id=None):
         """
         Initialize the `subject` object.
         """
 
-        data = dataset()
+        data = dataset(dataset_id)
+        self.dataset_id = dataset_id
         self.id = ID
         self.idx = np.argwhere(data.subj_list==ID).squeeze()
         self.dir = f"{data.subj_dir}/{ID}"
@@ -348,11 +411,11 @@ class subject:
                                          dtype="object").T.reshape(-1, 4)
         for h, k, w, name in surf_args:
             path = f"{self.dir}/{w}/fsaverage_LR{k}k/{self.id}.{h}.{name}_MSMAll.{k}k_fs_LR.surf.gii"
-            if os.exists(path):
+            if os.path.exists(path):
                 setattr(self, f"{h}_{name}_{k}k_{w}",  path)
 
             path = self.outpath(f"{w}/fsaverage_LR{k}k/{self.id}.{h}.{name}_MSMAll.{k}k_fs_LR.surf.gii")
-            if os.exists(path):
+            if os.path.exists(path):
                 setattr(self, f"{h}_{name}_{k}k_{w}",  path)
 
 
@@ -373,8 +436,8 @@ class subject:
             The full path to the output file.
         """
 
-        filename = f"{dataset().output_dir}/{self.id}/{filename}"
-        if os.exists(filename) & (not replace):
+        filename = f"{dataset(self.dataset_id).output_dir}/{self.id}/{filename}"
+        if os.path.exists(filename) & (not replace):
             raise ValueError("This file already exists. Change 'filename' or set 'replace' to True")
         return filename
 
@@ -468,8 +531,8 @@ class subject:
         if hemi is None:
             raise TypeError("Please specify one hemisphere: 'L' or 'R'")
         
-        filename = f"{dataset().output_dir}/{self.id}.{hemi}.gdist_triu.10k_fs_LR.npy"
-        if os.exists(filename):
+        filename = f"{dataset(self.dataset_id).output_dir}/{self.id}.{hemi}.gdist_triu.10k_fs_LR.npy"
+        if os.path.exists(filename):
             return np.load(filename)
         else:
             raise ValueError(f"{filename} does not exist, generate it and try again.")
@@ -503,7 +566,7 @@ class subject:
         if hemi is None or target is None:
             raise TypeError("Please specify one hemisphere ('L' or 'R') and a vertex index")
 
-        gdist_triu = subject(self.id).load_gdist_triu(hemi)
+        gdist_triu = subject(self.id, self.dataset_id).load_gdist_triu(hemi)
         gdist_v = row_from_triu(target, k=1, triu=gdist_triu)
 
         return gdist_v
@@ -529,7 +592,7 @@ class subject:
             A `Bunch` object containing the embeddings for the specified hemisphere.
         """
 
-        embeddings = create_bunch_from(dataset().outpath(f"All.{h}.embeddings.npz"))
+        embeddings = create_bunch_from(dataset(self.dataset_id).outpath(f"All.{h}.embeddings.npz"))
 
         if alg is None:
             alg = embeddings.keys()
@@ -548,6 +611,104 @@ class subject:
         setattr(self, f"embeds_{h}", embeddings)
 
 
+def init_dataset(dataset_id=None, group_dir=None, subj_dir=None,
+                 output_dir=None, mesh10k_dir=None, subj_list=None
+):
+    """
+    Create or update a dataset definition in a JSON file within the package directory.
+
+    Parameters
+    ----------
+    dataset_id : str, optional
+        Unique identifier for the dataset. If None or empty, an error is raised.
+    group_dir : str, optional
+        Directory containing group-level data.
+    subj_dir : str, optional
+        Directory containing subject-level data.
+    output_dir : str, optional
+        Directory for saving outputs.
+    mesh10k_dir : str, optional
+        Directory containing 10k-resolution meshes.
+    subj_list : str, optional
+        Path to the subject list file.
+
+    Raises
+    ------
+    ValueError
+        If dataset_id is not provided (None or empty).
+        If dataset_id is new and any of the paths are missing.
+    """
+
+    arguments = locals()
+
+    # 1. Determine the package directory and JSON file path
+    pkg_path = os.path.dirname(variograd_utils.__file__)
+    json_path = os.path.join(pkg_path, 'directories.json')
+
+    # 2. Check if dataset_id is provided
+    if not dataset_id:
+        raise ValueError("You must provide a dataset_id.")
+
+    # 3. Load existing data (or start fresh if file doesn't exist)
+    if os.path.exists(json_path) and os.path.getsize(json_path) > 0:
+        with open(json_path, "r") as f:
+            data = json.load(f)
+    else:
+        data = {}
+
+    # 4. Check if this is a new dataset ID
+    required = ["group_dir", "subj_dir", "output_dir", "mesh10k_dir", "subj_list"]
+    is_new = dataset_id not in data
+    
+    if is_new:
+        # If it's new, ensure none of the important paths are missing
+        missing = [field for field in required if arguments[field] is None]
+        if missing:
+            raise ValueError(f"Missing  arguments required for creating a new dataset: "
+                             + ", ".join(missing))
+        data[dataset_id] = {field: arguments[field] for field in required}
+        
+    else:
+        data[dataset_id] = {field: (value if arguments[field] is None else arguments[field])
+                            for field, value in data[dataset_id].items()}
+
+    # 6. Write back to JSON
+    with open(json_path, "w") as f:
+        json.dump(data, f, indent=4)
+
+    # 7. Print info
+    if is_new:
+        print(f"New dataset '{dataset_id}' created in '{json_path}'.")
+    else:
+        print(f"Dataset '{dataset_id}' has been updated in '{json_path}'.")
+
+
+def create_bunch_from(A):
+    """
+    Create a `Bunch` object from various input types.
+
+    Parameters
+    ----------
+    A : str, dict, or numpy.lib.npyio.NpzFile
+        The input to convert into a `Bunch`. Can be:
+        - A string representing the path to a `.npz` file.
+        - A dictionary containing key-value pairs.
+        - A `numpy.lib.npyio.NpzFile` object.
+
+    Returns
+    -------
+    sklearn.utils.Bunch
+        A `Bunch` object containing the key-value pairs from the input.
+    """
+
+    if isinstance(A, str):
+        return Bunch(**dict(np.load(A).items()))
+    elif isinstance(A, dict):
+        return Bunch(**A)
+    elif isinstance(A, np.lib.npyio.NpzFile):
+        return Bunch(**dict(A.items()))
+    else:
+        raise TypeError("'A' should be a dictionary, a numpy NpzFile, or the path to a NpzFile")
 
 
 # MISC
@@ -759,7 +920,7 @@ def npz_update(filename, items={}):
         Key-value pairs to update or add to the `.npz` file. Default is an empty dictionary.
     """
 
-    if os.exists(filename):
+    if os.path.exists(filename):
         npz = dict(np.load(filename))
         npz.update(items)
         np.savez(filename, **npz)
