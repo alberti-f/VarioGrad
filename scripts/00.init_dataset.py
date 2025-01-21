@@ -1,5 +1,5 @@
-
 import sys
+import os
 import argparse
 from variograd_utils import init_dataset
 
@@ -54,3 +54,6 @@ args = parser.parse_args()
 
 # Edit dataset JSON configuration file
 init_dataset(**args.__dict__)
+
+# Create output directory
+os.mkdirs(args.__dict__["output_dir"])

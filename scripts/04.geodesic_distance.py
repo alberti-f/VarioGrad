@@ -39,15 +39,15 @@ import numpy as np
 import nibabel as nib
 from variograd_utils import dataset, subject
 
+dataset_id = str(sys.argv[1])
+index = int(sys.argv[2]) - 1
 
-index = int(sys.argv[1]) - 1
-
-data = dataset()
+data = dataset(dataset_id)
 ID = data.subj_list[index]
 
 command = "wb_command -surface-geodesic-distance-all-to-all {0} {1}"
 
-subj = subject(ID)
+subj = subject(ID, data.id)
 
 for h in ["L", "R"]:
 

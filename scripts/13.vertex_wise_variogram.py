@@ -50,7 +50,8 @@ import variograd_utils.variography_utils as vu
 from variograd_utils.brain_utils import vertex_info_10k
 
 # Iterable parameters
-alg_idx = int(sys.argv[1]) - 1
+dataset_id = sys.argv[1]
+alg_idx = int(sys.argv[2]) - 1
 algorithms = ["JE_cauchy50", "JE_cauchy100", "JE_cauchy150", "JE_cauchy200", "GCCA_r100", "JE_None50"]
 algorithms = [algorithms[alg_idx]]
 ndims = [3, 8, 15]
@@ -67,7 +68,7 @@ alpha_time = "a05_t1"
 detrend = False
 
 # Create iterable parameter combinations
-data =  dataset()
+data =  dataset(dataset_id)
 
 for h in hemispheres:
     print("\nHemisphere:", h)
@@ -81,7 +82,7 @@ for h in hemispheres:
     # Loading coordinates in functional embedding
     print("\n\tLoading coordinates in functional embedding")
     load_gradient = lambda ID: np.load(
-        subject(ID).outpath(f'{ID}.FC_embeddings.npz')
+        subject(ID, data.id).outpath(f'{ID}.FC_embeddings.npz')
         )[alpha_time][hemi, grd]
     gradients = np.vstack([load_gradient(ID) for ID in data.subj_list], dtype="float32").T
 

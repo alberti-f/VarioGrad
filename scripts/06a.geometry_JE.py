@@ -49,13 +49,13 @@ import numpy as np
 from variograd_utils.core_utils import dataset, subject, npz_update
 from variograd_utils.embed_utils import JointEmbedding, kernel_affinity, pseudo_sqrt
 
-index = int(sys.argv[1])-1
+dataset_id = str(sys.argv[1])
+index = int(sys.argv[2])-1
 
-data = dataset()
+data = dataset(dataset_id)
 ID = data.subj_list[index]
 
 n_components = 20
-data = dataset()
 kernel = ["cauchy", "gauss", "linear", None]
 scale = np.arange(50, 201, 50, dtype="float32")
 alignment = "rotation"
@@ -66,7 +66,7 @@ hemi = ["L", "R"]
 params = np.array(np.meshgrid(scale, kernel), dtype="object").T.reshape(-1, 2)
 
 for h in hemi:
-    subj = subject(ID)
+    subj = subject(ID, data.id)
     subj_points = subj.load_surf(h, 10, type="cortex_midthickness").darrays[0].data
     avg_points = data.load_surf(h, 10, type="cortex_midthickness").darrays[0].data
 

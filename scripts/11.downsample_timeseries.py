@@ -53,13 +53,13 @@ import nibabel as nib
 from variograd_utils import dataset, subject
 from variograd_utils.brain_utils import save_gifti, vertex_info_10k
 
+dataset_id = sys.argv[1]
+idx = int(sys.argv[2])-1
+fwhm = int(sys.argv[3])
 
-idx = int(sys.argv[1])-1
-fwhm = int(sys.argv[2])
-
-data = dataset()
+data = dataset(dataset_id)
 ID = data.subj_list[idx]
-subj = subject(ID)
+subj = subject(ID, data.id)
 
 
 # set formattable paths
@@ -179,7 +179,7 @@ if idx == len(data.subj_list)-1:
     M = np.zeros((n_vertices, n_vertices))
 
     for ID in data.subj_list:
-        subj = subject(ID)
+        subj = subject(ID, data.id)
         tseries = nib.load(subj.outpath(f"{ID}.rfMRI_REST_Atlas_MSMAll.10k_fs_LR.dtseries.nii")
                            ).get_fdata()
         M += np.corrcoef(tseries.T)

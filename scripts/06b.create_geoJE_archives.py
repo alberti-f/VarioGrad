@@ -27,14 +27,15 @@ Notes:
 
 """
 
-
+import sys
 import os
 import numpy as np
 from variograd_utils.core_utils import dataset, subject, npz_update
 from variograd_utils.brain_utils import vertex_info_10k
 
 n_components = 20
-data = dataset()
+dataset_id = str(sys.argv[1])
+data = dataset(dataset_id)
 
 
 # preassign empty arrays
@@ -48,7 +49,7 @@ embeddings_l = {}
 embeddings_r = {}
 for i, ID in enumerate(data.subj_list):
 
-    subj = subject(ID)
+    subj = subject(ID, data.id)
 
     embeddings_subj = np.load(subj.outpath(f"{ID}.L.embeddings.npz"))
     for key, value in embeddings_subj.items():
@@ -73,11 +74,11 @@ print("\nArchives saved")
 
 
 # remove individual embeddings
-exists_L = os.path.exists(subject(ID).outpath(f"{ID}.L.embeddings.npz"))
-exists_R = os.path.exists(subject(ID).outpath(f"{ID}.R.embeddings.npz"))
+exists_L = os.path.exists(subject(ID, data.id).outpath(f"{ID}.L.embeddings.npz"))
+exists_R = os.path.exists(subject(ID, data.id).outpath(f"{ID}.R.embeddings.npz"))
 if  exists_L and exists_R:
     for ID in data.subj_list:
-        os.remove(subject(ID).outpath(f"{ID}.L.embeddings.npz"))
-        os.remove(subject(ID).outpath(f"{ID}.R.embeddings.npz"))
+        os.remove(subject(ID, data.id).outpath(f"{ID}.L.embeddings.npz"))
+        os.remove(subject(ID, data.id).outpath(f"{ID}.R.embeddings.npz"))
 
 print("\nSubject embeddings removed")

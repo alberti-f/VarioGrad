@@ -33,14 +33,16 @@ Notes:
 
 """
 
-
+import sys
+import os
 from subprocess import run
 import numpy as np
 from nibabel import gifti, save, load
 import hcp_utils as hcp
-from variograd_utils import dataset
+import variograd_utils as vu
 
-data = dataset()
+dataset_id = sys.argv[1]
+data = vu.dataset(dataset_id)
 group_dir = data.group_dir
 mesh10k_dir = data.mesh10k_dir
 output_dir = data.output_dir
@@ -94,7 +96,7 @@ for h in ["L", "R"]:
     vinfo[f"gray{h.lower()}"] = np.arange(len(mask))[mask]
     vinfo[f"offset{h.lower()}"] = len(mask)*(h=="R")
 
-utils_dir = dataset().utils_dir
+utils_dir = os.path.dirname(vu.__file__)
 np.savez(f"{utils_dir}/fMRI_vertex_info_10k", 
          grayl=vinfo["grayl"], grayr=vinfo["grayr"],
          num_meshl=vinfo["num_meshl"], num_meshr=vinfo["num_meshr"],
