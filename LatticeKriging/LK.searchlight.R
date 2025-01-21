@@ -63,9 +63,10 @@ ow <- TRUE
 
 # Input arguments
 args = commandArgs(trailingOnly=T)
-H = as.character(args[[1]])
-vtx = as.integer(args[[2]])
-scale = as.integer(args[[3]])
+dataset_id = as.character(args[[1]])
+H = as.character(args[[2]])
+vtx = as.integer(args[[3]])
+scale = as.integer(args[[4]])
 
 
 # Embeddings-related parameters
@@ -99,7 +100,7 @@ verbose = TRUE
 
 np <- import("numpy")
 vgu <- import("variograd_utils")
-ds <- vgu$dataset()
+ds <- vgu$dataset(dataset_id)
 
 
 outdir <- ds$output_dir
