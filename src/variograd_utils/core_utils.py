@@ -157,7 +157,7 @@ class dataset:
 
         self.subj_list = np.loadtxt(self.subj_list, dtype="int32")
         self.N = len(self.subj_list)
-        self.id = f"{self.N}avg"
+        self.id = dataset_id #f"{self.N}avg"
         self.pairs = list(combinations(self.subj_list, 2))
 
         surf_args = np.array(np.meshgrid(["L", "R"], [10, 32],
@@ -290,12 +290,12 @@ class dataset:
             A list containing the averaged pointsets and triangles, if `assign` is True.
         """
 
-        pointsets, triangles = subject(self.subj_list[0]).load_surf(h, k=k).darrays
+        pointsets, triangles = subject(self.subj_list[0], self.id).load_surf(h, k=k).darrays
         pointsets = pointsets.data
         triangles = triangles.data
 
-        for id in self.subj_list[1:]:
-            pointsets += subject(id).load_surf(h, k=k).darrays[0].data
+        for ID in self.subj_list[1:]:
+            pointsets += subject(ID, self.id).load_surf(h, k=k).darrays[0].data
         pointsets /= self.N
 
         avg_surf = [pointsets, triangles]
@@ -566,7 +566,7 @@ class subject:
         if hemi is None or target is None:
             raise TypeError("Please specify one hemisphere ('L' or 'R') and a vertex index")
 
-        gdist_triu = subject(self.id).load_gdist_triu(hemi)
+        gdist_triu = subject(self.id, self.dataset_id).load_gdist_triu(hemi)
         gdist_v = row_from_triu(target, k=1, triu=gdist_triu)
 
         return gdist_v
