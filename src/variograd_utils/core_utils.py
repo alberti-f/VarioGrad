@@ -394,12 +394,13 @@ class subject:
         Loads embeddings for a subject.
     """
 
-    def __init__(self, ID=None):
+    def __init__(self, ID=None, dataset_id=None):
         """
         Initialize the `subject` object.
         """
 
-        data = dataset()
+        data = dataset(dataset_id)
+        self.dataset_id = dataset_id
         self.id = ID
         self.idx = np.argwhere(data.subj_list==ID).squeeze()
         self.dir = f"{data.subj_dir}/{ID}"
@@ -435,7 +436,7 @@ class subject:
             The full path to the output file.
         """
 
-        filename = f"{dataset().output_dir}/{self.id}/{filename}"
+        filename = f"{dataset(self.dataset_id).output_dir}/{self.id}/{filename}"
         if os.path.exists(filename) & (not replace):
             raise ValueError("This file already exists. Change 'filename' or set 'replace' to True")
         return filename
@@ -530,7 +531,7 @@ class subject:
         if hemi is None:
             raise TypeError("Please specify one hemisphere: 'L' or 'R'")
         
-        filename = f"{dataset().output_dir}/{self.id}.{hemi}.gdist_triu.10k_fs_LR.npy"
+        filename = f"{dataset(self.dataset_id).output_dir}/{self.id}.{hemi}.gdist_triu.10k_fs_LR.npy"
         if os.path.exists(filename):
             return np.load(filename)
         else:
@@ -591,7 +592,7 @@ class subject:
             A `Bunch` object containing the embeddings for the specified hemisphere.
         """
 
-        embeddings = create_bunch_from(dataset().outpath(f"All.{h}.embeddings.npz"))
+        embeddings = create_bunch_from(dataset(self.dataset_id).outpath(f"All.{h}.embeddings.npz"))
 
         if alg is None:
             alg = embeddings.keys()
