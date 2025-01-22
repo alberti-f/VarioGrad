@@ -56,4 +56,4 @@ args = parser.parse_args()
 init_dataset(**args.__dict__)
 
 # Create output directory
-os.mkdirs(args.__dict__["output_dir"])
+os.makedirs(args.__dict__["output_dir"], exist_ok=True)
