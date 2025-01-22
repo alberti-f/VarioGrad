@@ -568,13 +568,14 @@ def _laplacian(A, normalized=True):
         raise ValueError("A must be a squared, symmetrical affinity matrix.")
 
     # Calculate degree
-    D = np.sum(A, axis=1).reshape(-1, 1)
+    D = np.sum(A, axis=1)
 
     # Compute the Laplacian matrix
-    L = np.diag(D.squeeze()) - A 
+    L = np.diag(D) - A 
     
     if normalized:
         D_inv_sqrt = np.diag(D ** -0.5)
+        print(L.shape, D_inv_sqrt.shape)
         L = (D_inv_sqrt @ L) @ D_inv_sqrt
 
     return L
