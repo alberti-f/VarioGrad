@@ -58,7 +58,7 @@ ID = data.subj_list[index]
 n_components = 20
 kernel = ["cauchy", "gauss", "linear", None]
 scale = np.arange(50, 201, 50, dtype="float32")
-alignment = "rotation"
+alignment = "procrustes"
 affinity = "precomputed"
 je_method = "le"
 hemi = ["L", "R"]
