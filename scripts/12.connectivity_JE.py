@@ -125,6 +125,6 @@ filename = subj.outpath(f'{ID}.FC_embeddings.npz')
 npz_update(filename,  embedding_dict)
 print(f"Subject embeddings saved in archive {filename} \n")
 
-filename = subj.outpath(f'{ID}.FC_embeddings.npz')
+filename = subj.outpath(f'{ID}.FC_embeddings_refs.npz')
 npz_update(filename,  reference_dict)
 print(f"Reference embeddings saved in archive {filename} \n")
