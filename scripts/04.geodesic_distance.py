@@ -51,7 +51,7 @@ subj = subject(ID, data.id)
 
 for h in ["L", "R"]:
 
-    filename = data.outpath(f"{ID}.{h}.gdist_triu.10k_fs_LR.npy")
+    filename = subj.outpath(f"{ID}.{h}.gdist_triu.10k_fs_LR.npy")
     if exists(filename):
         continue
 

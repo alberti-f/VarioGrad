@@ -531,7 +531,7 @@ class subject:
         if hemi is None:
             raise TypeError("Please specify one hemisphere: 'L' or 'R'")
         
-        filename = f"{dataset(self.dataset_id).output_dir}/{self.id}.{hemi}.gdist_triu.10k_fs_LR.npy"
+        filename = self.outpath(f"{self.id}.{hemi}.gdist_triu.10k_fs_LR.npy")
         if os.path.exists(filename):
             return np.load(filename)
         else:
