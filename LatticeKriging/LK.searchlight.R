@@ -82,7 +82,6 @@ if (H == "L") {
 }
 
 # LK-related parameters
-nsub <- 500
 nlevel = 1
 NC = 20
 NC.buffer = 1
@@ -104,6 +103,7 @@ ds <- vgu$dataset(dataset_id)
 
 
 outdir <- ds$output_dir
+nsub <- ds$N
 subj_list <- as.matrix(ds$subj_list)
 subj_list <- subj_list[1:nsub]
 
@@ -125,8 +125,7 @@ n.train = length(train.idx)
 n.test = nsub - n.train
 
 # Load gradients
-filename <- paste0(outdir, "/500avg.",
-                   H,".FC_embeddings_flip.a05_t1.G", g, ".csv")
+filename <- ds$outpath(paste0(ds.id, ".FC_embeddings.a05_t1.G", g, ".csv"))
 gradients <- as.matrix(read.csv(filename))
 
 # Create group mean and aplit train/test dataset
