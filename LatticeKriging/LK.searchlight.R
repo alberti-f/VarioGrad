@@ -39,13 +39,13 @@
 
 ################################################################################
 ################################################################################
-
-if(!file.exists("renv.lock")) {
-  cat("Running script setup.R to create the environment.\n")
-  args = commandArgs(trailingOnly=F)
-  setup_path <- dirname(sub("--file=", "", args[grep("--file=", args)]))
-  source(paste0(setup_path, "/setup.R"))
-}
+# 
+# if(!file.exists("renv.lock")) {
+#   cat("Running script setup.R to create the environment.\n")
+#   args = commandArgs(trailingOnly=F)
+#   setup_path <- dirname(sub("--file=", "", args[grep("--file=", args)]))
+#   source(paste0(setup_path, "/setup.R"))
+# }
 
 # Setup environment
 renv::activate()
@@ -125,7 +125,7 @@ n.train = length(train.idx)
 n.test = nsub - n.train
 
 # Load gradients
-filename <- ds$outpath(paste0(ds.id, ".FC_embeddings.a05_t1.G", g, ".csv"))
+filename <- ds$outpath(paste0(ds$id, ".", H, ".FC_embeddings.a05_t1.G", g, ".csv"))
 gradients <- as.matrix(read.csv(filename))
 
 # Create group mean and aplit train/test dataset
