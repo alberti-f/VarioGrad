@@ -567,16 +567,16 @@ def _laplacian(A, normalized=True):
     if (A.shape[0] != A.shape[1]) or not np.allclose(A, A.T):
         raise ValueError("A must be a squared, symmetrical affinity matrix.")
 
-    # Calculate degree
+    # Calculate Laplacian
     D = np.sum(A, axis=1)
+    L = D - A
 
-    # Compute the Laplacian matrix
-    L = np.diag(D) - A 
-    
+    # Normalize Laplacian
     if normalized:
-        D_inv_sqrt = np.diag(D ** -0.5)
-        print(L.shape, D_inv_sqrt.shape)
-        L = (D_inv_sqrt @ L) @ D_inv_sqrt
+        D_inv_sqrt = 1.0 / np.sqrt(D)
+        D_inv_sqrt[np.isinf(D_inv_sqrt)] = 0
+        D_inv_sqrt = np.diag(D_inv_sqrt)
+        L = D_inv_sqrt @ (L @ D_inv_sqrt)
 
     return L
 

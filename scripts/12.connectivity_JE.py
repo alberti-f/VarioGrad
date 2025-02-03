@@ -84,17 +84,17 @@ for h in ["L", "R"]:
     # Load and threshold group average FC matrix
     R = np.load(data.outpath(f"{data.id}.REST_FC.10k_fs_LR.npy")
                ).astype("float32")[:, cortex][cortex, :]
-    R[R < np.percentile(R, threshold, axis=0)] = 0
+    R[R < np.percentile(R, threshold, axis=0, keepdims=True)] = 0
 
     # Load individual timeseries, compute FC, and threshold
     M = nib.load(subject(subj.id, data.id).outpath(
         f"{subj.id}.rfMRI_REST_Atlas_MSMAll.10k_fs_LR.dtseries.nii")
         ).get_fdata().astype("float32")[:, cortex]
     M = np.corrcoef(M.T)
-    M[M < np.percentile(M, threshold, axis=0)] = 0
+    M[M < np.percentile(M, threshold, axis=0, keepdims=True)] = 0
 
     # Compute correspondance matrix
-    C = cosine_similarity(M.T, R.T)
+    C = cosine_similarity(M, R)
 
     # Compute joint diffusion map embedding
     print("Diffusion map embedding:")
@@ -104,7 +104,7 @@ for h in ["L", "R"]:
 
     je = JointEmbedding(method="dme",
                         n_components=n_components,
-                        alignment="sign_flip",
+                        alignment="procrustes",
                         random_state=0,
                         copy=True)
 
