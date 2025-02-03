@@ -56,8 +56,9 @@ data = dataset(dataset_id)
 ID = data.subj_list[index]
 
 n_components = 20
-kernel = ["cauchy", "gauss", "linear", None]
-scale = np.arange(50, 201, 50, dtype="float32")
+kernel = ["cauchy", "gauss", "linear"]
+# scale = np.arange(50, 201, 50, dtype="float32")
+scale = np.array([2, 10, 50, 100, 200], dtype="float32")
 alignment = "procrustes"
 affinity = "precomputed"
 je_method = "le"
