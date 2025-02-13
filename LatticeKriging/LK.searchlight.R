@@ -91,7 +91,7 @@ alpha = c(1)
 LKGeometry = "LKBox"
 max.points = NULL
 mean.neighbor = 25
-verbose = TRUE
+verbose = FALSE
 
 ################################################################################
 
