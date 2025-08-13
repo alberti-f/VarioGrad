@@ -2,6 +2,7 @@
 
 import os
 import json
+import h5py
 from itertools import combinations
 import numpy as np
 from sklearn.utils import Bunch
@@ -683,6 +684,105 @@ def init_dataset(dataset_id=None, group_dir=None, subj_dir=None,
         print(f"Dataset '{dataset_id}' has been updated in '{json_path}'.")
 
 
+# Dict-like data handling utilities
+# ---------------------------------
+def print_structure(d, indent=0):
+    """
+    Recursively prints the structure of a nested dictionary.
+
+    This function traverses through all levels of a dictionary and prints each key
+    along with the type of its associated value. For values that are dictionaries,
+    the function calls itself recursively with an increased indentation level.
+
+    Parameters
+    ----------
+    d : dict
+        The dictionary whose structure is to be printed.
+    indent : int, optional
+        The current indentation level (default is 0). This is used internally
+        for formatting the output.
+
+    Returns
+    -------
+    None
+    """
+    for key, value in d.items():
+        print(' ' * indent + f"{key}: {type(value).__name__}")
+        if isinstance(value, dict):
+            print_structure(value, indent + 4)
+
+
+def feature(d, filename):
+    """
+    Recursively saves a dictionary of dictionaries (with numpy arrays at the end)
+    to an HDF5 file.
+
+    Parameters
+    ----------
+    d : dict
+        The dictionary to save. Nested dictionaries will be stored as groups.
+        Numpy arrays (or array-like data) will be stored as datasets.
+    filename : str
+        The name of the HDF5 file to create.
+
+    Returns
+    -------
+    None
+    """
+    
+    with h5py.File(filename, 'w') as h5file:
+        _rec_save(h5file, d)
+
+
+def _rec_save(h5group, dict_obj):
+    for key, item in dict_obj.items():
+        if isinstance(item, dict):
+            # Create a new group for nested dictionaries
+            subgroup = h5group.create_group(key)
+            _rec_save(subgroup, item)
+        else:
+            # Save arrays or other data (must be convertible to numpy array)
+            h5group.create_dataset(key, data=np.array(item))
+
+
+def load_hdf5(filename):
+    """
+    Recursively loads an HDF5 file into a dictionary of dictionaries.
+    
+    The function reads groups as dictionaries and datasets as numpy arrays.
+    It expects that the HDF5 file was written with a similar structure, where
+    nested dictionaries are stored as groups and arrays or array-like data are
+    stored as datasets.
+    
+    Parameters
+    ----------
+    filename : str
+        The name of the HDF5 file to load.
+    
+    Returns
+    -------
+    dict
+        A dictionary containing the data from the HDF5 file, preserving the 
+        nested structure.
+    """
+
+    with h5py.File(filename, 'r') as h5file:
+        return _rec_load(h5file)
+
+
+def _rec_load(h5obj):
+    ans = {}
+    # Iterate over all items in the current group or file
+    for key, item in h5obj.items():
+        if isinstance(item, h5py.Group):
+            # If the item is a group, recursively load it into a dict
+            ans[key] = _rec_load(item)
+        elif isinstance(item, h5py.Dataset):
+            # If the item is a dataset, read its value (as a numpy array)
+            ans[key] = item[()]
+    return ans
+
+
 def create_bunch_from(A):
     """
     Create a `Bunch` object from various input types.
@@ -711,10 +811,29 @@ def create_bunch_from(A):
         raise TypeError("'A' should be a dictionary, a numpy NpzFile, or the path to a NpzFile")
 
 
-# MISC
-# ----
-# Functions for various tasks
+def npz_update(filename, items={}):
+    """
+    Update an existing `.npz` file with new data or create a new file.
 
+    Parameters
+    ----------
+    filename : str
+        Path to the `.npz` file.
+    items : dict, optional
+        Key-value pairs to update or add to the `.npz` file. Default is an empty dictionary.
+    """
+
+    if os.path.exists(filename):
+        npz = dict(np.load(filename))
+        npz.update(items)
+        np.savez(filename, **npz)
+
+    else:
+        np.savez(filename, **items)
+
+
+# Matrix operations
+# -----------------
 def shape_from_triu(n, k=0):
     """
     Compute the matrix dimension from the size of its upper triangular vector.
@@ -906,28 +1025,6 @@ def vector_wise_corr(A, B):
 
     # Calculate correlation coefficients
     return np.sum(A * B, axis=0) / (np.linalg.norm(A, axis=0) * np.linalg.norm(B, axis=0))
-
-
-def npz_update(filename, items={}):
-    """
-    Update an existing `.npz` file with new data or create a new file.
-
-    Parameters
-    ----------
-    filename : str
-        Path to the `.npz` file.
-    items : dict, optional
-        Key-value pairs to update or add to the `.npz` file. Default is an empty dictionary.
-    """
-
-    if os.path.exists(filename):
-        npz = dict(np.load(filename))
-        npz.update(items)
-        np.savez(filename, **npz)
-
-    else:
-        np.savez(filename, **items)
-
 
 
 def bins_ol(xmin, xmax, nbins=10, overlap=0.25, inclusive=True):
