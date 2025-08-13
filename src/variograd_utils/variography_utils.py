@@ -1,5 +1,5 @@
 import numpy as np
-from variograd_utils.embed_utils import kernelize
+from variograd_utils.embed_utils import kernel_affinity
 from scipy.spatial.distance import pdist, squareform
 from scipy.optimize import curve_fit
 import sklearn.metrics.pairwise as pw
@@ -202,7 +202,7 @@ def _single_lag_variogram(distances, differences, lag, weight=None, scale=None):
     if weight is None:
         weights = np.ones(N) / N
     else:
-        weights = kernelize(np.abs(lag - distances), kernel=weight, scale=scale)
+        weights = kernel_affinity(np.abs(lag - distances), kernel=weight, scale=scale)
         weights /= weights.sum()
 
     diffs_sqrd = np.square(differences)
@@ -321,40 +321,110 @@ def digitizedd(x, bins):
     ----------
     x : array_like
         The data to be digitized. MxN array of M points in N dimensions.
-    bins : array_like, tuple, or int
-        The bin edges along each dimension.
-        A list of N arrays, each with the bin edges for that dimension.
-        If a tuple, bins should cspecify the number of bins in each dimension (slower).
-        If an int, the same number of bins will be used for each dimension.      
-        Bins are defined as bins[i-1] <= x < bins[i].
-        A constant of 1e-6 is subtracted7added to the extremes to ensure all
-        the bins include all points in the data.
+    bins : list, tuple, or int
+        The bin edges or the number of bins in which to divide each dimension.
+        - list: A list of np.ndarrays contining bin edges for each dimension.
+        - tuple: A tuple of integers specifying the number of bins to divide
+                each dimension in.
+        - int: The number of bins to divide all dimension in.      
     
     Returns
     -------
     bin_idx : array_like
         The bin index for each point in x. An array of size M.
+
+    Notes
+    -----
+    Bins are defined as bins[i-1] <= x < bins[i].
+    Data outside all bin edges is assigned a 0 value.
+    When bins is int or tuple, a constant of 1e-6 is subtracted/added 
+    to the extremes to ensure inclusion of all data points.
+    
     """
 
+    if x.ndim < 2: 
+        raise ValueError(
+            f"Expected at least 2D array, got {x.ndim}D array instead.\n"
+            f"x.reshape(-1, 1) if your data has a single feature or "
+            f"x.reshape(1, -1) if it contains a single sample.")
+    
     # Get the number of dimensions
     ndims = x.shape[1]
-
+    # Set data range and extreme bin edges
     k = 1e-6
     min_ax = x.min(axis=0) - k
     max_ax = x.max(axis=0) + k
-    if isinstance(bins, tuple):
-        bins = [np.linspace(min_ax[idx], max_ax[idx], bins[idx] + 1) for idx in range(ndims)]
-    elif isinstance(bins, int):
-        bins = np.linspace(min_ax, max_ax, num=bins+1).T
 
-    # Digitize each dimension
-    digitized_indices = np.array([np.digitize(x[:, i], bins[i]) - 1 for i in range(ndims)])
+    # Convert bins to tuple if int
+    if isinstance(bins, int):
+        bins = tuple([bins] * ndims)
 
+    # Check for errors and compute bin edges if necessay
+    if len(bins) != ndims:
+        raise ValueError(f"Expected bins {type(bins).__name__} of {ndims}, got {len(bins)}.")
+
+    if isinstance(bins, list):
+        if any(any(np.diff(b)<=0) for b in bins):
+            raise ValueError(f"Bin edges must be strictly increasing.")
+
+    # Calculate bin edges
+    elif isinstance(bins, tuple):
+        bins = [np.linspace(min_ax[idx], max_ax[idx], bins[idx] + 1)
+                for idx in range(ndims)]
+    
+    
     # Calculate the total number of bins
     nbins = [len(b) - 1 for b in bins]
-
+    
+    # Digitize each dimension (subtract 1 to make 0 indexed)
+    digitized_indices = np.array([np.digitize(x[:, i], bins[i]) - 1 for i in range(ndims)])
+    within_bins = (digitized_indices >= 0) & (digitized_indices < np.reshape(nbins, (-1,1)))
+    within_bins = np.all(within_bins, axis=0)
+    
     # Create a unique index for each combination of bin indices
-    return np.ravel_multi_index(digitized_indices, nbins)
+    digits = np.zeros(x.shape[0], dtype=np.int32)
+    digits[within_bins] = np.ravel_multi_index(digitized_indices[:,within_bins], nbins) + 1
+
+    return digits
+
+
+def bin_centers(edges):
+    """
+    Compute the center coordinates of N-dimensional bins.
+
+    Parameters
+    ----------
+    edges : list of array_like
+        A list of N arrays, where each array contains the bin edges
+        along one dimension. Each array must be 1D and strictly increasing.
+
+    Returns
+    -------
+    centers : ndarray of shape (num_bins, N)
+        An array containing the coordinates of the center of each bin.
+        The number of bins is the product of (len(e) - 1) for all e in edges.
+        Each row corresponds to the center of one N-dimensional bin.
+
+    Raises
+    ------
+    TypeError
+        If `edges` is not a list of arrays or array-like sequences.
+    ValueError
+        If any element in `edges` is not 1D or not strictly increasing.
+    """
+
+    if not isinstance(edges, (list, tuple)) | np.any([~isinstance(e, (list, np.ndarray)) for e in edges]):
+        raise TypeError(f"`edges` must be a list or tuple of 1D arrays, got {type(edges).__name__}.")
+
+    if np.any([e.ndim != 1 for e in edges]):
+        raise ValueError(f"Bin edges array must all be 1D.")
+
+    if np.any([np.any(np.diff(e) <= 0) for e in edges]):
+        raise ValueError(f"Bin edges must be strictly increasing for all dimensions.")
+
+    grids = np.meshgrid(*[0.5 * (e[1:] + e[:-1]) for e in edges], indexing="ij")
+
+    return np.stack(grids, axis=-1).reshape(-1, len(edges))
 
 
 def exponential_covariance(dists, correlation_length):
