@@ -57,9 +57,8 @@ ID = data.subj_list[index]
 
 n_components = 20
 kernel = ["cauchy", "gauss", "linear"]
-# scale = np.arange(50, 201, 50, dtype="float32")
-scale = np.array([2, 10, 50, 100, 200], dtype="float32")
-alignment = "procrustes"
+scale = np.array([10, 50, 100, 200], dtype="float32")
+alignment = "sort_flip"
 affinity = "precomputed"
 je_method = "le"
 hemi = ["L", "R"]
@@ -71,11 +70,10 @@ for h in hemi:
     subj_points = subj.load_surf(h, 10, type="cortex_midthickness").darrays[0].data
     avg_points = data.load_surf(h, 10, type="cortex_midthickness").darrays[0].data
 
-    # C = np.sqrt(np.sum((subj_points - avg_points) ** 2, axis=1), dtype="float32")
-    # C = C + np.tile(C, [C.size, 1]).T
     R = data.load_gdist_matrix(h).astype("float32")
+    R = (R + R.T) / 2
     M = subj.load_gdist_matrix(h).astype("float32")
-    # C += (M + R) / 2
+    M = (M + M.T / 2)
 
     all_embeddings = {}
     for n, (s, k) in enumerate(params):
@@ -87,7 +85,6 @@ for h in hemi:
         Radj = R.copy() if k is None else kernel_affinity(R.copy(), kernel=k, scale=s)
         Madj = M.copy() if k is None else kernel_affinity(M.copy(), kernel=k, scale=s)
         Cadj = pseudo_sqrt(np.dot(Madj, Radj), n_components=100)
-        # Cadj = C.copy() if k is None else kernel_affinity(C.copy(), kernel=k, scale=s)
 
         je = JointEmbedding(method=je_method,
                             n_components=n_components,

@@ -39,13 +39,13 @@
 
 ################################################################################
 ################################################################################
-# 
-# if(!file.exists("renv.lock")) {
-#   cat("Running script setup.R to create the environment.\n")
-#   args = commandArgs(trailingOnly=F)
-#   setup_path <- dirname(sub("--file=", "", args[grep("--file=", args)]))
-#   source(paste0(setup_path, "/setup.R"))
-# }
+
+if(!file.exists("renv.lock")) {
+  cat("Running script setup.R to create the environment.\n")
+  args = commandArgs(trailingOnly=F)
+  setup_path <- dirname(sub("--file=", "", args[grep("--file=", args)]))
+  source(paste0(setup_path, "/setup.R"))
+}
 
 # Setup environment
 renv::activate()
@@ -53,7 +53,6 @@ usr.lib <- NULL
 library(caret, lib.loc = usr.lib)
 library(reticulate, lib.loc = usr.lib)
 library(LatticeKrig, lib.loc = usr.lib)
-library(abind)
 
 ################################################################################
 
@@ -65,18 +64,21 @@ ow <- TRUE
 # Input arguments
 # dataset_id = "train"
 # H = "L"
-# vtx = 4612
+# g = 1
+# vtx = 1
 # scale = 2
-args = commandArgs(trailingOnly=T)
+# side=4
+args = commandArgs(trailingOnly=TRUE)
 dataset_id = as.character(args[[1]])
 H = as.character(args[[2]])
-vtx = as.integer(args[[3]])
-scale = as.integer(args[[4]])
+g = as.integer(args[[3]])
+vtx = as.integer(args[[4]])
+scale = as.integer(args[[5]])
+side = as.integer(args[[6]])
 
 # Embeddings-related parameters
 algorithm <- paste0("JE_cauchy", scale)
 diffusion <- "a05_t1"
-g <- 1
 if (H == "L") {
   ivtx <- 1:9394
   nvtx <- length(ivtx)
@@ -125,20 +127,17 @@ if (!ow) {
 # Generate train and test sets
 set.seed(123)
 train.idx <- createDataPartition(y = 1:nsub, p = .75, list = FALSE)
-test.idx <- test.idx <- setdiff(1:nsub, train.idx) 
-n.train = length(train.idx)
-n.test = nsub - n.train
+test.idx <- setdiff(1:nsub, train.idx) 
+n.train <- length(train.idx)
+n.test <- nsub - n.train
 
 
-# Load embeddings and reate group mean and split train/test dataset
-# subj.idx <- matrix(rep(1:ds$N, nvtx), nrow = ds$N, ncol = nvtx)
 embeddings <- np$load(paste0(outdir, "/All.",H,".embeddings.npz"))[[algorithm]]
-# embeddings <- abind(embeddings[,,1:3], subj.idx, along = 3)
 embeddings <- embeddings[subj_mask,,1:3]
 locations.avg <- colMeans(embeddings[train.idx,,])
 locations.train <- matrix(aperm(embeddings[train.idx,,], c(2, 1, 3)),
                           nrow = n.train*nvtx, ncol = 3)
-locations.test <- matrix(aperm(embeddings[-train.idx,,], c(2, 1, 3)),
+locations.test <- matrix(aperm(embeddings[test.idx,,], c(2, 1, 3)),
                          nrow = n.test*nvtx, ncol = 3)
 
 
@@ -169,7 +168,7 @@ covs.names <- np$loadtxt(ds$outpath(paste0(ds$id, ".fixed_model_features",".npy"
 # Get median distance to closest vertex within the avg surfce
 avg.dists = rdist(locations.avg)
 avg.dists[avg.dists==0] <- max(avg.dists)
-sl.side <- median(apply(avg.dists, 1, min)) * 3
+sl.side <- median(apply(avg.dists, 1, min)) * side
 center <- locations.avg[vtx,]
 
 # Create masks of vertices included in this domain
@@ -182,11 +181,15 @@ gradients.train <- gradients.train[mask.train]
 covariates.train <- covariates.train[mask.train,]
 subj.idx.train <- rep(train.idx, each=nvtx)[mask.train]
 expand.row.train <- match(subj.idx.train, sort(unique(subj.idx.train)))
+train.idx.sl <- unique(subj.idx.train)
+n.train.sl <- length(train.idx.sl)
 locations.test <- locations.test[mask.test,]
 gradients.test <- gradients.test[mask.test]
 covariates.test <- covariates.test[mask.test,]
 subj.idx.test <- rep(test.idx, each=nvtx)[mask.test]
 expand.row.test <- match(subj.idx.test, sort(unique(subj.idx.test)))
+test.idx.sl <- unique(subj.idx.test)
+n.test.sl <- length(unique(test.idx.sl))
 
 ################################################################################
 
@@ -195,60 +198,39 @@ expand.row.test <- match(subj.idx.test, sort(unique(subj.idx.test)))
 # in the train set
 subj.nvtx <- numeric()
 grad.subj.locavg.train <- numeric()
-covs.subj.locavg.train <- array(0, dim=c(length(unique(subj.idx.train)), dim(covariates.train)[2]))
-for (i in 1:length(unique(subj.idx.train))) {
-    subj.idx = unique(subj.idx.train)[i]
+covs.subj.locavg.train <- array(0, dim=c(n.train.sl, dim(covariates.train)[2]))
+for (i in 1:n.train.sl) {
+    subj.idx = train.idx.sl[i]
     subj.nvtx[i] <- sum(subj.idx.train==subj.idx)
-    if (subj.nvtx[i]>0) {        
-        grad.subj.locavg.train[i] <- median(gradients.train[subj.idx.train==subj.idx])
+    if (subj.nvtx[i]>1) {        
+        grad.subj.locavg.train[i] <- mean(gradients.train[subj.idx.train==subj.idx])
         covars.tmp <- covariates.train[subj.idx.train==subj.idx,]
-        if (is.null(dim(covars.tmp))) {covs.subj.locavg.train[i,] <- covars.tmp; next}
         covs.subj.locavg.train[i,] <- apply(covars.tmp, 2, median)
-    }  
+    }
+    else if (subj.nvtx[i]==1) {
+        grad.subj.locavg.train[i] <- gradients.train[subj.idx.train==subj.idx]
+        covs.subj.locavg.train[i,] <- covariates.train[subj.idx.train==subj.idx,]
+    }
 }
-# grad.subj.locavg.train <- rep(grad.subj.avg.train, each=nvtx)[mask.train]
-# covs.subj.locavg.train <- matrix(rep(covs.subj.locavg.train, each=nvtx),
-#                                  ncol=dim(covariates.train)[2])[mask.train,]
+
 
 # and in the test set
 grad.subj.locavg.test <- numeric()
-covs.subj.locavg.test <- array(0, dim=c(length(unique(subj.idx.test)), dim(covariates.test)[2]))
-for (i in 1:length(unique(subj.idx.test))) {
-    subj.idx = unique(subj.idx.test)[i]
-    if (sum(subj.idx.test==subj.idx)>0) {        
-        grad.subj.locavg.test[i] <- median(gradients.test[subj.idx.test==subj.idx])
+covs.subj.locavg.test <- array(0, dim=c(n.test.sl, dim(covariates.test)[2]))
+for (i in 1:n.test.sl) {
+    subj.idx = test.idx.sl[i]
+    subj.nvtx.tmp <- sum(subj.idx.test==subj.idx)
+    if (subj.nvtx.tmp>1) {        
+        grad.subj.locavg.test[i] <- mean(gradients.test[subj.idx.test==subj.idx])
         covars.tmp <- covariates.test[subj.idx.test==subj.idx,]
-        if (is.null(dim(covars.tmp))) {covs.subj.locavg.test[i,] <- covars.tmp; next}
         covs.subj.locavg.test[i,] <- apply(covars.tmp, 2, median)
-    }  
+    }
+    else if (subj.nvtx.tmp==1) {
+        grad.subj.locavg.test[i] <- gradients.test[subj.idx.test==subj.idx]
+        covs.subj.locavg.test[i,] <- covariates.test[subj.idx.test==subj.idx,]
+    }
 }
-# grad.subj.locavg.test <- rep(grad.subj.avg.test, each=nvtx)[mask.test]
-# covs.subj.locavg.test <- matrix(rep(covs.subj.locavg.test, each=nvtx),
-#                                 ncol=dim(covariates.test)[2])[mask.test,]
 
-# in the train set
-# subj.nvtx <- numeric()
-# grad.subj.locavg.train <- list()
-# for (i in train.idx) {
-#   subj.mask <- (embeddings[i,,] - matrix(rep(center, each=nvtx), ncol = 3))
-#   subj.mask <- rowSums(abs(subj.mask) > sl.side) == 0
-#   subj.nvtx <- c(subj.nvtx, sum(subj.mask))
-#   grad.subj.locavg.train <- append(grad.subj.locavg.train,
-#                                    rep(mean(gradients[i,subj.mask]),
-#                                        sum(subj.mask)))
-# }
-# grad.subj.locavg.train <- unlist(grad.subj.locavg.train)
-
-# and in the test set
-# grad.subj.locavg.test <- list()
-# for (i in test.idx) {
-#   subj.mask <- (embeddings[i,,] - matrix(rep(center, each=nvtx), ncol = 3))
-#   subj.mask <- rowSums(abs(subj.mask) > sl.side) == 0
-#   grad.subj.locavg.test <- append(grad.subj.locavg.test,
-#                                   rep(mean(gradients[i,subj.mask]),
-#                                       sum(subj.mask)))
-# }
-# grad.subj.locavg.test <- unlist(grad.subj.locavg.test)
 
 # Compute group averages for vertex index
 grad.grp.avg.train <- grad.grp.avg.train[mask.train]
@@ -263,17 +245,13 @@ grad.grp.avg.test <- grad.grp.avg.test[mask.test]
 colnames(covs.subj.locavg.train) <- covs.names
 covs.mean.train <- colMeans(covs.subj.locavg.train)
 covs.sd.train <- apply(covs.subj.locavg.train, 2, sd)
-covs.subj.locavg.train <- scale(covs.subj.locavg.train, center = covs.mean.train, scale = covs.sd.train)
+covs.subj.locavg.train <- scale(covs.subj.locavg.train, center=covs.mean.train, scale=covs.sd.train)
 covs.subj.locavg.train <- as.data.frame(covs.subj.locavg.train)
 
 colnames(covs.subj.locavg.test) <- covs.names
-covs.subj.locavg.test <- scale(covs.subj.locavg.test, center = covs.mean.train, scale = covs.sd.train)
+covs.subj.locavg.test <- scale(covs.subj.locavg.test, center=covs.mean.train, scale=covs.sd.train)
 covs.subj.locavg.test <- as.data.frame(covs.subj.locavg.test)
 
-# covariates.train <- scale(covariates.train[mask.train,])
-# colnames(covariates.train) <- covs.names
-# covariates.test <- scale(covariates.test[mask.test,])
-# colnames(covariates.test) <- covs.names
 
 ################################################################################
 ################################################################################
@@ -281,14 +259,14 @@ covs.subj.locavg.test <- as.data.frame(covs.subj.locavg.test)
 # Calculate residuals of covariates
 
 covs.subj.locavg.train$gradients <- grad.subj.locavg.train 
-
 lm.covs.train <- lm(gradients ~ ., data = covs.subj.locavg.train)
-grads.train.fit.covs <- lm.covs.train$fitted.values
-grads.train.res.covs <- lm.covs.train$residuals
-grads.test.fit.covs <- predict(lm.covs.train, newdata = covs.subj.locavg.test)
-grads.test.res.covs <- gradients.test - grads.test.fit.covs[expand.row.test]
 
+grads.train.fit.covs <- lm.covs.train$fitted.values[expand.row.train]
+grads.train.res.covs <- lm.covs.train$residuals[expand.row.train]
 grads.train.res.loc <- gradients.train - grad.subj.locavg.train[expand.row.train]
+
+grads.test.fit.covs <- predict(lm.covs.train, newdata = covs.subj.locavg.test)[expand.row.test]
+grads.test.res.covs <- gradients.test - grads.test.fit.covs
 grads.test.res.loc <- gradients.test - grad.subj.locavg.test[expand.row.test]
 
 ################################################################################
@@ -320,14 +298,14 @@ LKfit <- LatticeKrig(locations.train,
 
 # Model with local averages
 LKfit.locavg <- LatticeKrig(locations.train,
-                       grads.train.res.loc[expand.row.train],
+                       grads.train.res.loc,
                        LKinfo = LKinfo,
                        verbose = verbose,
                        normalize = TRUE)
 
 # Model with covariates
 LKfit.covs <- LatticeKrig(locations.train,
-                          grads.train.res.covs[expand.row.train],
+                          grads.train.res.covs,
                           LKinfo = LKinfo,
                           verbose = verbose,
                           normalize = TRUE)
@@ -344,9 +322,9 @@ predict.train.locavg.full <- grad.subj.locavg.train[expand.row.train] + LKfit.lo
 predict.train.locavg.fixed <- grad.subj.locavg.train[expand.row.train] + predict.LKrig(LKfit.locavg, xnew = locations.train, just.fixed=TRUE)
 predict.train.locavg.avg <- grad.subj.locavg.train[expand.row.train]
 
-predict.train.covs.full <- grads.train.fit.covs[expand.row.train] + LKfit.covs$fitted.values
-predict.train.covs.fixed <- grads.train.fit.covs[expand.row.train] + predict.LKrig(LKfit.covs, xnew = locations.train, just.fixed=TRUE)
-predict.train.covs.avg <- grads.train.fit.covs[expand.row.train]
+predict.train.covs.full <- grads.train.fit.covs + LKfit.covs$fitted.values
+predict.train.covs.fixed <- grads.train.fit.covs + predict.LKrig(LKfit.covs, xnew = locations.train, just.fixed=TRUE)
+predict.train.covs.avg <- grads.train.fit.covs
 
 # Predict test locations
 predict.test <- predict.LKrig(LKfit, xnew = locations.test)
@@ -355,9 +333,9 @@ predict.test.locavg.full <- grad.subj.locavg.test[expand.row.test] + predict.LKr
 predict.test.locavg.fixed <- grad.subj.locavg.test[expand.row.test] + predict.LKrig(LKfit.locavg, xnew = locations.test, just.fixed=TRUE)
 predict.test.locavg.avg <- grad.subj.locavg.test[expand.row.test]
 
-predict.test.covs.full <- grads.test.fit.covs[expand.row.test] + predict.LKrig(LKfit.covs, xnew = locations.test)
-predict.test.covs.fixed <- grads.test.fit.covs[expand.row.test] + predict.LKrig(LKfit.covs, xnew = locations.test, just.fixed=TRUE)
-predict.test.covs.avg <- grads.test.fit.covs[expand.row.test]
+predict.test.covs.full <- grads.test.fit.covs + predict.LKrig(LKfit.covs, xnew = locations.test)
+predict.test.covs.fixed <- grads.test.fit.covs + predict.LKrig(LKfit.covs, xnew = locations.test, just.fixed=TRUE)
+predict.test.covs.avg <- grads.test.fit.covs
 
 ################################################################################
 
@@ -455,12 +433,12 @@ LKfit.locavg$weights = list()
 ################################################################################
 
 # Save output
-outpath <- paste0(outdir, "/LKresults.", algorithm, ".covs")
+outpath <- paste0(outdir, "/LKresults.", algorithm, ".G", g, ".covs")
 if (!dir.exists(outpath)) {dir.create(outpath)}
 
-outpath <- paste0(outpath, "/", H)
+outpath <- paste0(outpath, "/side", side, "/", H)
 if (!dir.exists(outpath)) {
-    dir.create(outpath)
+    dir.create(outpath, recursive=TRUE)
     dir.create(paste0(outpath, "/Cors"))
     dir.create(paste0(outpath, "/R2"))
     dir.create(paste0(outpath, "/MLEs"))
@@ -578,11 +556,6 @@ write.csv(data.frame(subj.nvtx), nameout, row.names=FALSE)
 
 nameout <- paste0(outpath, "/Coeffs/LK.searchlight.coeffs.v", vtx, ".csv")
 write.csv(t(data.frame(lm.covs.train$coefficients)), nameout, row.names=FALSE)
-
-
-# LKmodels <- list(LKfit=LKfit, LKfit.locavg=LKfit.locavg)
-# nameout <- paste0(outpath, "/LKmodels/LK.searchlight.LKmdl.v", vtx, ".RData")
-# save(LKmodels, file=nameout)
 
 
 cat("")

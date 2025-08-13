@@ -45,7 +45,6 @@ Notes:
 
 """
 
-
 import sys
 from itertools import product
 import numpy as np
@@ -82,19 +81,23 @@ for h in ["L", "R"]:
     cortex_slice = slice(0, vinfo.grayl.size) if h == "L" else slice(vinfo.grayl.size, None)
 
     # Load and threshold group average FC matrix
-    R = np.load(data.outpath(f"{data.id}.REST_FC.10k_fs_LR.npy")
+    R = np.load(dataset("train").outpath(f"train.REST_FC.10k_fs_LR.npy")
                ).astype("float32")[:, cortex][cortex, :]
+    R = (R + R.T) / 2
     R[R < np.percentile(R, threshold, axis=0, keepdims=True)] = 0
-
+    R[R < 0] = 0
+    
     # Load individual timeseries, compute FC, and threshold
     M = nib.load(subject(subj.id, data.id).outpath(
         f"{subj.id}.rfMRI_REST_Atlas_MSMAll.10k_fs_LR.dtseries.nii")
         ).get_fdata().astype("float32")[:, cortex]
     M = np.corrcoef(M.T)
+    M = (M + M.T) / 2
     M[M < np.percentile(M, threshold, axis=0, keepdims=True)] = 0
+    M[M < 0] = 0
 
     # Compute correspondance matrix
-    C = cosine_similarity(M, R)
+    C = cosine_similarity(M.T, R.T)
 
     # Compute joint diffusion map embedding
     print("Diffusion map embedding:")
@@ -104,9 +107,9 @@ for h in ["L", "R"]:
 
     je = JointEmbedding(method="dme",
                         n_components=n_components,
-                        alignment="procrustes",
+                        alignment="sort_flip",
                         random_state=0,
-                        copy=True)
+                        copy=True)    
 
     # Compute gradients with all combinations of alpha and time
     for key, kwargs in kwarg_dict.items():

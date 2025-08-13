@@ -65,14 +65,14 @@ ow <- TRUE
 args = commandArgs(trailingOnly=T)
 dataset_id = as.character(args[[1]])
 H = as.character(args[[2]])
-vtx = as.integer(args[[3]])
-scale = as.integer(args[[4]])
+g = as.integer(args[[3]])
+vtx = as.integer(args[[4]])
+scale = as.integer(args[[5]])
 
 
 # Embeddings-related parameters
 algorithm <- paste0("JE_cauchy", scale)
 diffusion <- "a05_t1"
-g <- 1
 if (H == "L") {
   ivtx <- 1:9394
   nvtx <- length(ivtx)
@@ -348,7 +348,7 @@ LKfit.Z$weights = list()
 ################################################################################
 
 # Save output
-outpath <- paste0(outdir, "/LKresults.", algorithm)
+outpath <- paste0(outdir, "/LKresults.", algorithm, ".G", g)
 if (!dir.exists(outpath)) {dir.create(outpath)}
 
 outpath <- paste0(outpath, "/", H)

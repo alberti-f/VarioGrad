@@ -2,6 +2,7 @@ import warnings
 import numpy as np
 from scipy.sparse import diags
 from scipy.linalg import orthogonal_procrustes
+from scipy.optimize import linear_sum_assignment
 from sklearn.metrics.pairwise import cosine_similarity, euclidean_distances
 from sklearn.decomposition import TruncatedSVD
 from variograd_utils.core_utils import vector_wise_corr
@@ -22,8 +23,9 @@ class JointEmbedding:
         The alignment method to use:
         - "procrustes": orthogonal Procrustes rotation with scaling.
         - "rotation": orthogonal Procrustes rotation (default)
-        - "sign_flip": multiply the embedding dimension by -1 if the correlation with
-            the corresponding dimension in the reference is negative.
+        - "sort_flip": reorder the embedding dimensions maximizing absolute
+                correlation coefficients with th independent refrence. Then multiply
+                dimensions with a negative coefficient by -1.
         - "dot_product": align the embedding using the dot product of the joint reference
             and independent reference embeddings.
     random_state : int, optional
@@ -220,14 +222,16 @@ class JointEmbedding:
         reference : np.ndarray
             The reference embedding.
         method : str, optional
-            The alignment method to use:
+            The method used to align the joint embedding to the independently
+            computed reference embedding:
             - "procrustes": orthogonal Procrustes rotation with scaling.
             - "rotation": orthogonal Procrustes rotation (default)
-            - "sign_flip": multiply the embedding dimension by -1 if the correlation with
-                the corresponding dimension in the reference is negative.
+            - "sort_flip": reorder the embedding dimensions maximizing absolute
+                correlation coefficients with th independent refrence. Then multiply
+                dimensions with a negative coefficient by -1.
             - "dot_product": align the embedding using the dot product of the joint reference
                 and independent reference embeddings.
-            
+
         Returns:
         -------
         embedding : np.ndarray
@@ -238,8 +242,11 @@ class JointEmbedding:
         """
 
         s = 1
-        if method == "sign_flip":
-            to_flip = vector_wise_corr(embedding.copy(), independent_reference.copy()) < 0
+        if method == "sort_flip":
+            idx = argsort_axes(joint_reference.copy(), independent_reference.copy())
+            joint_reference = joint_reference[:, idx]
+            embedding = embedding[:, idx]
+            to_flip = vector_wise_corr(joint_reference.copy(), independent_reference.copy()) < 0
             R = np.diag([-1 if i else 1 for i in to_flip])
 
         elif method == "dot_product":
@@ -713,3 +720,46 @@ def procrustes_rotation(M, R):
     M /= np.linalg.norm(M)
 
     return orthogonal_procrustes(M, R)
+
+
+def argsort_axes(M, R):
+    """
+    Determine optimal axis reordering of a subject embedding to match a reference embedding.
+
+    This function computes the absolute Pearson correlation between each pair of axes 
+    in the subject embedding `M` and reference embedding `R`, and solves the optimal 
+    one-to-one axis assignment using the Hungarian algorithm to maximize total correlation.
+
+    Parameters
+    ----------
+    M : numpy.ndarray
+        A 2D array of shape `(n_samples, n_features)`. The embedding
+        dimensions to reorder.
+    R : numpy.ndarray
+        A 2D array of shape `(n_samples, n_features)`. The target
+        reference embedding.
+
+    Returns
+    -------
+    reorder_idx : ndarray of shape (n_dims,)
+        Indices that reorder the axes of `M` to best match the axes of `R` 
+        in correlation magnitude. Use as: `M[:, reorder_idx]`.
+
+    Notes
+    -----
+    - Sign alignment (i.e., flipping axes) is not handled here.
+    - Axis correspondence is determined using absolute Pearson correlation.
+
+    See Also
+    --------
+    vector_wise_corr : Computes vector-wise Pearson correlation.
+    """
+    
+    ndims = M.shape[1]
+
+    if R.shape[1] != ndims:
+        raise ValueError("Both embeddings must have the same number of dimensions")
+    
+    S = np.array([vector_wise_corr(R, m.reshape(-1,1)) for m in M.T])
+
+    return linear_sum_assignment(abs(S), maximize=True)[1]
