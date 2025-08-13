@@ -712,7 +712,7 @@ def print_structure(d, indent=0):
             print_structure(value, indent + 4)
 
 
-def feature(d, filename):
+def save_hdf5(d, filename):
     """
     Recursively saves a dictionary of dictionaries (with numpy arrays at the end)
     to an HDF5 file.
