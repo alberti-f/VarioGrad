@@ -3,6 +3,7 @@
 import os.path as os
 from subprocess import run
 import numpy as np
+from scipy.stats import rankdata
 from sklearn.utils import Bunch
 import nibabel as nib
 from nibabel import save, gifti, nifti1, cifti2
@@ -370,3 +371,19 @@ def right_cortex_data_10k(arr, fill=0, vertex_info=vertex_info_10k):
         idx = slice(vertex_info.grayl.size, vertex_info.grayl.size + vertex_info.grayr.size)
         out[:, vertex_info.grayr] = arr[:, idx]
     return out.squeeze()
+
+
+def sl_to_surf_map(metric, sl_indices):
+
+    if isinstance(metric, dict):
+        sl_to_surf = np.full_like(sl_indices, np.nan, dtype=float)
+        for k, v in metric.items():
+            sl_to_surf[sl_indices == k] = v
+        
+    elif isinstance(metric, np.ndarray):
+        if metric.ndim == 1: metric = np.atleast_2d(metric.copy())
+        sl_indices = rankdata(sl_indices.copy(), method="dense").astype(int).reshape(sl_indices.shape) - 1
+        row_indices = np.atleast_2d(range(metric.shape[0])).T
+        sl_to_surf = np.squeeze(metric[row_indices, sl_indices])
+
+    return sl_to_surf
