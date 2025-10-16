@@ -12,13 +12,7 @@ LKparams <- read_LK_params(
     "/well/margulies/users/bez157/VarioGrad_project/VarioGrad/LatticeKriging/tmp.modules/LK_parameters.json"
 )
 args <- parse_args()############################
-# args <- list(
-#     "H"="R",
-#     "g"=1,
-#     "sl.idx"=1,
-#     "scale"=50,
-#     "side"=4
-# )
+
 
 print(paste("SL#", args$sl.idx, "    Set up data objects", as.character(Sys.time())))
 # Generate the train and test data objects
