@@ -738,6 +738,7 @@ def _rec_save(h5group, dict_obj):
     for key, item in dict_obj.items():
         if isinstance(item, dict):
             # Create a new group for nested dictionaries
+            if not isinstance(key, str): key = str(key)
             subgroup = h5group.create_group(key)
             _rec_save(subgroup, item)
         else:
