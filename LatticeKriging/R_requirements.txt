@@ -2,3 +2,4 @@ LatticeKrig
 caret
 reticulate
 abind
+jsonlite
