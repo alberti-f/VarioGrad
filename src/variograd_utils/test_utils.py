@@ -3,7 +3,7 @@ import pandas as pd
 from scipy.stats import ttest_rel, wilcoxon, t
 
 def compare_errors(true, est1, est2, stat_test="ttest_rel", alternative="two-sided",
-                   weights=None, groupby=None, agg="mean"):
+                   weights=None, groupby=None, agg_errors=None):
 
     if stat_test not in ["ttest_rel", "wilcoxon"]:
         raise ValueError("stat_test must be 'ttest_rel' or 'wilcoxon'")
@@ -14,7 +14,8 @@ def compare_errors(true, est1, est2, stat_test="ttest_rel", alternative="two-sid
     if true.shape[0] != est1.shape[0] or true.shape[0] != est2.shape[0]:
         raise ValueError("true, est1, and est2 must have the same number of observations")
 
-    true, err1, err2, weights = _errors_prep(true, est1, est2, weights=weights, groupby=groupby, agg=agg)
+    true, err1, err2, weights = _errors_prep(true, est1, est2, weights=weights, groupby=groupby, agg_errors=agg_errors)
+    
     results = {}
     if ~np.all(weights == 1):
         comparison = ttest_rel_w(err1, err2, popmean=0, weights=weights, alternative=alternative)
@@ -34,7 +35,7 @@ def compare_errors(true, est1, est2, stat_test="ttest_rel", alternative="two-sid
     return {k: np.squeeze(v) for k, v in results.items()}
 
 
-def _errors_prep(true, est1, est2, weights=None, groupby=None, agg="mean"):
+def _errors_prep(true, est1, est2, weights=None, groupby=None, agg_errors=None):
     # Reshape to 2D if 1D
     true = true.reshape(-1,1) if true.ndim==1 else true
     est1 = est1.reshape(-1,1) if est1.ndim==1 else est1
@@ -50,13 +51,19 @@ def _errors_prep(true, est1, est2, weights=None, groupby=None, agg="mean"):
     # Group by if specified to test grand mean errors
     if groupby is not None:
         df_tmp  = pd.DataFrame(true)
-        true = df_tmp.groupby(groupby).agg(agg).to_numpy()
+        true = df_tmp.groupby(groupby).agg("mean").to_numpy()
         df1_tmp = pd.DataFrame(err1)
-        err1 = df1_tmp.groupby(groupby).agg(agg).to_numpy()
+        err1 = df1_tmp.groupby(groupby).agg("mean").to_numpy()
         df2_tmp = pd.DataFrame(err2)
-        err2 = df2_tmp.groupby(groupby).agg(agg).to_numpy()
+        err2 = df2_tmp.groupby(groupby).agg("mean").to_numpy()
         df3_tmp = pd.DataFrame(weights)
-        weights = df3_tmp.groupby(groupby).agg(agg).to_numpy()
+        weights = df3_tmp.groupby(groupby).agg("mean").to_numpy()
+    
+    if (agg_errors is not None) and (agg_errors in ["mean", "median"]):
+        agg_func = np.nanmean if agg_errors == "mean" else np.nanmedian
+        err1 = agg_func(err1, axis=-1, keepdims=True)
+        err2 = agg_func(err2, axis=-1, keepdims=True)
+        weights = agg_func(weights, axis=-1, keepdims=True)
 
     return true, err1, err2, weights
 
