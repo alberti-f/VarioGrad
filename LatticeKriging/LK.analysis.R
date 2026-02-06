@@ -130,30 +130,30 @@ main <- function(args = NULL) {
 
 
 
-    # print(paste("SL#", args$sl.idx, "    Saving results", as.character(Sys.time())))
-    # # Save results to HDF5 after all analyses
+    print(paste("SL#", args$sl.idx, "    Saving results", as.character(Sys.time())))
+    # Save results to HDF5 after all analyses
 
 
-    # save_results(
-    #     train_sl = train.sl,
-    #     test_sl = test.sl,
-    #     basic_train = LKeval.train,
-    #     basic_test = LKeval.test,
-    #     basic_avg = LKeval.avg,
-    #     basic_null = LKeval.null,
-    #     centered_train = LKeval.train.c,
-    #     centered_test = LKeval.test.c,
-    #     centered_avg = LKeval.avg.c,
-    #     centered_null = LKeval.null.c,
-    #     filename = output
-    # )
+    save_results(
+        train_sl = train.sl,
+        test_sl = test.sl,
+        basic_train = LKeval.train,
+        basic_test = LKeval.test,
+        basic_avg = LKeval.avg,
+        basic_null = LKeval.null,
+        centered_train = LKeval.train.c,
+        centered_test = LKeval.test.c,
+        centered_avg = LKeval.avg.c,
+        centered_null = LKeval.null.c,
+        filename = output
+    )
 
-    # # Save parameters to CSV
-    # output <- paste0(outpath, "/parameters.csv")
-    # save_parameters_csv(LKparams, args, output)
-    # print(paste("SL#", args$sl.idx, "    Results saved at:", outpath))
+    # Save parameters to CSV
+    output <- paste0(outpath, "/parameters.csv")
+    save_parameters_csv(LKparams, args, output)
+    print(paste("SL#", args$sl.idx, "    Results saved at:", outpath))
 
-    # print(paste("SL#", args$sl.idx, "    LK analysis script completed", as.character(Sys.time())))
+    print(paste("SL#", args$sl.idx, "    LK analysis script completed", as.character(Sys.time())))
 }
 
 if (identical(environment(), globalenv())) {
