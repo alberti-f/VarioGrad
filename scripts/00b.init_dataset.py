@@ -1,4 +1,3 @@
-import sys
 import os
 import argparse
 from variograd_utils import init_dataset
