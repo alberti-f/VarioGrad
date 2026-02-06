@@ -4,29 +4,25 @@
 #'
 #' 
 
-check_requirements <- function(pkgs) {
-  missing <- pkgs[!sapply(pkgs, requireNamespace, quietly = TRUE)]
-  if (length(missing) > 0) {
-    cat("Installing missing packages:", paste(missing, collapse=", "), "\n")
-    install.packages(missing, repos = "https://cloud.r-project.org/")
-  }
-}
 
-activate_environment <- function() {
+activate_environment <- function(module_dir, requirements_file) {
+
+  # Stop if no requirements file is provided
+  if (missing(requirements_file)) {
+    stop("Error: No requirements file provided. Please specify the path to R_requirements.txt")
+  }
 
   # Check if renv.lock exists
-  if (!file.exists("renv.lock")) {
-    cat("Running script setup.R to create the environment.\n")
-    args <- commandArgs(trailingOnly = FALSE)
-    setup_path <- dirname(sub("--file=", "", args[grep("--file=", args)]))
-    source(paste0(setup_path, "/tmp.modules/setup_environment.R"))
-  }
+  # if (!file.exists("renv.lock")) {
+  cat("Running script setup.R to create the environment.\n")
+  source(file.path(module_dir, "setup_environment.R"))
+  setup_environment(requirements_file)
+  # }
 
   # Check and install required libraries if missing
-  check_requirements(c("caret", "reticulate", "LatticeKrig", "jsonlite"))
+  # check_requirements(c("caret", "reticulate", "LatticeKrig", "jsonlite"))
 
   # Activate renv and load required libraries
-  renv::activate()
   library(caret)
   library(reticulate)
   library(LatticeKrig)

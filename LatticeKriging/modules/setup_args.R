@@ -2,21 +2,23 @@
 #'
 #' Returns a named list of arguments: H, g, sl.idx, scale, side
 #'
-parse_args <- function() {
-  args <- commandArgs(trailingOnly = TRUE)
+parse_args <- function(args = NULL) {
+  if (is.null(args)) args <- commandArgs(trailingOnly = TRUE)
+
   if (length(args) < 5) {
     stop(paste(
       "Error: Not enough arguments provided.",
       "\nUsage: Rscript LK.searchlight.R <H> <g> <sl.idx> <scale> <side>",
       "\nWhere:",
       "  <H>        : Hemisphere ('L' or 'R')",
-      "  <g>        : Gradient index (integer)",
+      "  <g>        : path to CSV with data to predict",
       "  <sl.idx>   : Searchlight index (integer)",
       "  <scale>    : Scale parameter (integer)",
       "  <side>     : Searchlight side length (integer)",
       sep = "\n"
     ))
   }
+
   list(
     H = as.character(args[[1]]),
     g = as.integer(args[[2]]),

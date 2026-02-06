@@ -28,14 +28,14 @@ def load_predictions_arrays(filepaths, group, model_name, n_subjects, n_vertex, 
         
     observed = np.full([n_subjects, n_vertex], np.nan, dtype=float)
     predicted = np.full(preds_shape, np.nan, dtype=float)
-    standard_dev = np.full([n_subjects, n_vertex], np.nan, dtype=float)
+    variance = np.full([n_subjects, n_vertex], np.nan, dtype=float)
 
     for sl, df in df_dict.items():
         if first_item.ndim == 2: df["pred"] = df["pred"][:, :100]
         observed[df["subject"], df["vertex"]] = df["true"]
         predicted[df["subject"], df["vertex"]] = df["pred"]
-        standard_dev[df["subject"], df["vertex"]] = df["sd"]
-    return observed, predicted, standard_dev
+        variance[df["subject"], df["vertex"]] = df["var"]
+    return observed, predicted, variance
 
 
 def load_sl_preds(filepaths, group, model_name, n_threads=10):
@@ -55,7 +55,7 @@ def load_sl_preds(filepaths, group, model_name, n_threads=10):
 def _load_sl_preds_df(filepath, group, model_name):
     data = load_hdf5(filepath)
     df = _preds_df(data, group, model_name)
-    df["sd"] = pd.Series(df["true"]).groupby(df["subject"]).transform("std")
+    df["var"] = pd.Series(df["true"]).groupby(df["subject"]).transform("var") #("std")
     df = {k: np.array(v) for k, v in df.items()}
     return data["searchlight_id"], df
 

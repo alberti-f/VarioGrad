@@ -1003,7 +1003,7 @@ def row_from_triu(row, k=0, n=None, triu=None, include_diag=True, diag_fill=0):
     return np.int32(row_idx)
 
 
-def vector_wise_corr(A, B):
+def vector_wise_corr(A, B, copy=True):
     """
     Compute column-wise correlation coefficients between two matrices.
 
@@ -1021,6 +1021,9 @@ def vector_wise_corr(A, B):
     """
 
     # center the matrices
+    if copy:
+        A = A.copy()
+        B = B.copy()
     A -= A.mean(axis=0)
     B -= B.mean(axis=0)
 
