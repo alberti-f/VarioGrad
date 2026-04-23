@@ -9,8 +9,6 @@ __pycache__/
 
 # Ignore temporary notebook files
 .ipynb_checkpoints/
-notebooks/*
-*.ipynb
 
 # Ignore cluster simulator
 run_analyses.sh
