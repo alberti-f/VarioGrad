@@ -21,7 +21,7 @@ parse_args <- function(args = NULL) {
 
   list(
     H = as.character(args[[1]]),
-    g = as.integer(args[[2]]),
+    g = as.character(args[[2]]),
     sl.idx = as.integer(args[[3]]),
     scale = as.integer(args[[4]]),
     side = as.integer(args[[5]])
