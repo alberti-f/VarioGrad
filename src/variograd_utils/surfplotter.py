@@ -313,7 +313,7 @@ class SurfPlotter:
 
         if self.layout=="grid":
             if n_surfs==2:
-                h_offset = self.surf_dict["L"]["pts"].ptp(axis=0)[1]
+                h_offset = np.ptp(self.surf_dict["L"]["pts"], axis=0)[1]
                 h_offset += h_offset/10 + self.padding
                 traslation_vector = [0, 0, v_offset] if hemi=="L" else [0, h_offset, v_offset]
             else:
