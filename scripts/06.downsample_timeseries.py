@@ -111,7 +111,7 @@ for r in runs:
                 {sphere10k.format(h)} \
                     ADAP_BARY_AREA \
                         {tseries10k_gii.format(h, r)} \
-                            -area-surfs {subj.L_midthickness_32k_T1w} {subj.R_midthickness_10k_T1w}"
+                            -area-surfs {getattr(subj, f"{h}_midthickness_32k_T1w")} {getattr(subj, f"{h}_midthickness_10k_T1w")}"
         run(resample, shell=True)
 
     concat_L += f" -metric {tseries10k_gii.format('L', r)}"
