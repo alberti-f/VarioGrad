@@ -73,7 +73,7 @@ for h in hemi:
     R = data.load_gdist_matrix(h).astype("float32")
     R = (R + R.T) / 2
     M = subj.load_gdist_matrix(h).astype("float32")
-    M = (M + M.T / 2)
+    M = (M + M.T) / 2
 
     all_embeddings = {}
     for n, (s, k) in enumerate(params):
