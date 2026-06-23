@@ -145,7 +145,7 @@ class dataset:
         """
 
         pkg_path = os.path.dirname(variograd_utils.__file__)
-        json_path = f'{pkg_path}/directories.json'
+        json_path = os.path.join(pkg_path, "directories.json")
         with open(json_path, "r") as json_file:
             directories = json.load(json_file)
 
@@ -156,7 +156,11 @@ class dataset:
         for attribute, value in directories.items():
             setattr(self, attribute, value)
 
-        self.subj_list = np.loadtxt(self.subj_list, dtype="int32")
+        self.subj_list = np.loadtxt(self.subj_list, dtype="object")
+        try:
+            self.subj_list = self.subj_list.astype(np.int32)
+        except ValueError:
+            self.subj_list = self.subj_list.astype(str)
         self.N = len(self.subj_list)
         self.id = dataset_id #f"{self.N}avg"
         self.pairs = list(combinations(self.subj_list, 2))
@@ -167,9 +171,9 @@ class dataset:
 
         for h, k, name in surf_args:
             if k==32:
-                path = f"{self.group_dir}/{self.id}.{h}.{name}_MSMAll.{k}k_fs_LR.surf.gii"
+                path = os.path.join(self.group_dir, f"{self.id}.{h}.{name}_MSMAll.{k}k_fs_LR.surf.gii")
             elif k==10:
-                path = f"{self.mesh10k_dir}/{self.id}.{h}.{name}_MSMAll.{k}k_fs_LR.surf.gii"
+                path = os.path.join(self.mesh10k_dir, f"{self.id}.{h}.{name}_MSMAll.{k}k_fs_LR.surf.gii")
             else:
                 raise ValueError("Only 10k and 32k resolutions are supported")
 
@@ -193,7 +197,7 @@ class dataset:
             The full path to the output file.
         """
 
-        filename = f"{self.output_dir}/{filename}"
+        filename = os.path.join(self.output_dir, filename)
         if os.path.exists(filename) & (not replace):
             raise ValueError("This file already exists. Change 'filename' or set 'replace' to True")
         return filename
@@ -221,9 +225,9 @@ class dataset:
         """
 
         if k==32:
-            surf = nib.load(f"{self.group_dir}/{self.id}.{h}.{type}_MSMAll.{k}k_fs_LR.surf.gii")
+            surf = nib.load(os.path.join(self.group_dir, f"{self.id}.{h}.{type}_MSMAll.{k}k_fs_LR.surf.gii"))
         elif k==10:
-            surf = nib.load(f"{self.mesh10k_dir}/{self.id}.{h}.{type}_MSMAll.{k}k_fs_LR.surf.gii")
+            surf = nib.load(os.path.join(self.mesh10k_dir, f"{self.id}.{h}.{type}_MSMAll.{k}k_fs_LR.surf.gii"))
         else:
             raise ValueError("Only 10k and 32k resolutions are supported")
 
@@ -303,7 +307,7 @@ class dataset:
         if save:
             structure = ["CORTEX_LEFT" if h=="L" else "CORTEX_RIGHT"][0]
             if filename is None:
-                filename = f"{self.mesh10k_dir}/{self.id}.{h}.midthickness_MSMAll.{k}k_fs_LR.surf.gii"
+                filename = os.path.join(self.mesh10k_dir, f"{self.id}.{h}.midthickness_MSMAll.{k}k_fs_LR.surf.gii")
 
             save_gifti(darrays=avg_surf, intents=[1008, 1009],
                        dtypes=["NIFTI_TYPE_FLOAT32","NIFTI_TYPE_INT32"],
@@ -331,7 +335,7 @@ class dataset:
         if hemi is None:
             raise TypeError("Please specify one hemisphere: 'L' or 'R'")
 
-        filename = f"{self.output_dir}/{self.id}.{hemi}.gdist_triu.10k_fs_LR.npy"
+        filename = os.path.join(self.output_dir, f"{self.id}.{hemi}.gdist_triu.10k_fs_LR.npy")
         if os.path.exists(filename):
             return np.load(filename)
         else:
@@ -404,18 +408,18 @@ class subject:
         self.dataset_id = dataset_id
         self.id = ID
         self.idx = np.argwhere(data.subj_list==ID).squeeze()
-        self.dir = f"{data.subj_dir}/{ID}"
+        self.dir = os.path.join(data.subj_dir, str(ID))
 
         surf_args = np.array(np.meshgrid(["L", "R"], [10, 32],
                                          ["MNINonLinear","T1w"],
                                          ["midthickness", "cortex_midthickness"]),
                                          dtype="object").T.reshape(-1, 4)
         for h, k, w, name in surf_args:
-            path = f"{self.dir}/{w}/fsaverage_LR{k}k/{self.id}.{h}.{name}_MSMAll.{k}k_fs_LR.surf.gii"
+            path = os.path.join(self.dir, w, f"fsaverage_LR{k}k", f"{self.id}.{h}.{name}_MSMAll.{k}k_fs_LR.surf.gii")
             if os.path.exists(path):
                 setattr(self, f"{h}_{name}_{k}k_{w}",  path)
 
-            path = self.outpath(f"{w}/fsaverage_LR{k}k/{self.id}.{h}.{name}_MSMAll.{k}k_fs_LR.surf.gii")
+            path = self.outpath(os.path.join(w, f"fsaverage_LR{k}k", f"{self.id}.{h}.{name}_MSMAll.{k}k_fs_LR.surf.gii"))
             if os.path.exists(path):
                 setattr(self, f"{h}_{name}_{k}k_{w}",  path)
 
@@ -437,7 +441,7 @@ class subject:
             The full path to the output file.
         """
 
-        filename = f"{dataset(self.dataset_id).output_dir}/{self.id}/{filename}"
+        filename = os.path.join(dataset(self.dataset_id).output_dir, str(self.id), filename)
         if os.path.exists(filename) & (not replace):
             raise ValueError("This file already exists. Change 'filename' or set 'replace' to True")
         return filename
@@ -1079,4 +1083,3 @@ def bins_ol(xmin, xmax, nbins=10, overlap=0.25, inclusive=True):
         upper = lower + window
             
     return lower, upper
-        
