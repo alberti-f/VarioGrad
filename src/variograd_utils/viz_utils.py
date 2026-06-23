@@ -170,7 +170,7 @@ coldhot = matplotlib.colors.LinearSegmentedColormap.from_list("", ["#001F3D",
                                                                    "#356D8B",
                                                                    "#356D8B",
                                                                    "#ADD8E6",
-                                                                   "#EBE9ED",
+                                                                   "#F6F4F8", # "#EBE9ED",
                                                                    "#F1BBBD",
                                                                    "#E0677C",
                                                                    "#CE123B",
@@ -178,7 +178,7 @@ coldhot = matplotlib.colors.LinearSegmentedColormap.from_list("", ["#001F3D",
                                                                     ])
 
 
-coldhot_inv = matplotlib.colors.LinearSegmentedColormap.from_list("", ["#F4F4F6",
+coldhot_inv = matplotlib.colors.LinearSegmentedColormap.from_list("", ["#F6F4F8",
                                                                        "#F6C6C8",
                                                                        "#EB5069",
                                                                        "#A90F30",
@@ -186,7 +186,7 @@ coldhot_inv = matplotlib.colors.LinearSegmentedColormap.from_list("", ["#F4F4F6"
                                                                        "#003366",
                                                                        "#69BBD8",
                                                                        "#C3E1EA",
-                                                                       "#F4F4F6"
+                                                                       "#F6F4F8"
                                                                     ])
 
 
