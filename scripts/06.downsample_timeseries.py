@@ -71,6 +71,7 @@ tseries32k_gii = subj.outpath(f"{ID}." + "{0}.rfMRI_{1}_Atlas_MSMAll.32k_fs_LR.f
 sphere32k = data.group_dir + "/S1200.{0}.sphere.32k_fs_LR.surf.gii"
 sphere10k = data.mesh10k_dir + "/S1200.{0}.sphere.10k_fs_LR.surf.gii"
 subj_surf32k = "{0}_midthickness_32k_T1w"
+subj_surf10k = "{0}_midthickness_10k_T1w"
 fc_matrix = data.outpath(f"{data.id}.REST_FC.10k_fs_LR.npy")
 
 
@@ -111,7 +112,7 @@ for r in runs:
                 {sphere10k.format(h)} \
                     ADAP_BARY_AREA \
                         {tseries10k_gii.format(h, r)} \
-                            -area-surfs {getattr(subj, f"{h}_midthickness_32k_T1w")} {getattr(subj, f"{h}_midthickness_10k_T1w")}"
+                            -area-surfs {getattr(subj, subj_surf32k.format(h))} {getattr(subj, subj_surf10k.format(h))}"
         run(resample, shell=True)
 
     concat_L += f" -metric {tseries10k_gii.format('L', r)}"
