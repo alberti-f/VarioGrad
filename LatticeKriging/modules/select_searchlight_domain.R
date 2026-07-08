@@ -4,8 +4,8 @@
 #' Returns masked locations, gradients, subject indices, and mask.
 #'
 #' @param data List returned by load_data()
-#' @param sl.idx Index of the searchlight to select
-#' @return List with masked locations, gradients, subject indices, mask, and searchlight ID
+#' @param ID Identity code of the searchlight to select
+#' @return List containing masked locations, gradients, subject indices, mask, and searchlight ID
 select_searchlight <- function(data, ID) {
   # Check if ID is present in data$vtx.sl
   if (!(ID %in% data$vtx.sl)) {
@@ -18,6 +18,11 @@ select_searchlight <- function(data, ID) {
   # Apply mask to locations and values
   locations <- data$locations[mask, ]
   values <- data$values[mask, ]
+  covariates <- data$covariates
+  if (!is.null(covariates)) {
+    covariates <- covariates[mask, , drop=FALSE]
+  }
+
   subj.idx <- rep(1:data$n.subj, each = data$n.vtx)[mask]
   vertex.idx <- rep(1:data$n.vtx, times = data$n.subj)[mask]
 
@@ -26,6 +31,7 @@ select_searchlight <- function(data, ID) {
     ID = ID,
     locations = locations,
     values = values,
+    covariates = covariates,
     subj.idx = subj.idx,
     vertex.idx = vertex.idx,
     mask = mask
@@ -33,6 +39,16 @@ select_searchlight <- function(data, ID) {
 }
 
 
+#' Select Searchlight Domain and Center Values
+#'
+#' Extracts the subset of vertices assigned to a given searchlight index and centers the
+#' values on individual means.
+#' Returns appropriate subset of locations with related information. 
+#' 
+#' @param searchlight List returned by select_searchlight()
+#' @param data Optional list returned by load_data() (required if searchlight is NULL)
+#' @param ID Optional identity code of the searchlight to select (required if searchlight is NULL)
+#' @return List containing centered values, masked locations, gradients, subject indices, and mask
 select_searchlight_centered <- function(searchlight=NULL, data=NULL, ID=NULL) {
   if (is.null(searchlight) && (is.null(data) || is.null(ID))) {
     stop("Error: Provide either 'searchlight', or both 'data' and 'ID'.")
@@ -53,6 +69,7 @@ select_searchlight_centered <- function(searchlight=NULL, data=NULL, ID=NULL) {
     ID = searchlight$ID,
     locations = searchlight$locations,
     values = centered.values,
+    covariates = searchlight$covariates,
     subj.idx = searchlight$subj.idx,
     vertex.idx = searchlight$vertex.idx,
     mask = searchlight$mask,
@@ -63,7 +80,6 @@ select_searchlight_centered <- function(searchlight=NULL, data=NULL, ID=NULL) {
 
 
 compute_local_stats <- function(domain_data, stat_fun) {
-  # browser()
   if (!is.list(domain_data) || is.null(domain_data$values) || is.null(domain_data$subj.idx)) {
     stop("domain_data must be a list with 'values' and 'subj.idx'")
   }
