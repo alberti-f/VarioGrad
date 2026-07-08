@@ -47,6 +47,23 @@ save_results <- function(train_sl, test_sl,
 }
 
 
+#' Save LK covariate analysis results without avg/null controls
+save_results_cov <- function(train_sl, test_sl,
+                             basic_train, basic_test,
+                             centered_train, centered_test,
+                             covariates_only_train, covariates_only_test,
+                             covariates_only_centered_train, covariates_only_centered_test,
+                             filename) {
+  results <- build_models_cov_dict(train_sl, test_sl,
+                                   basic_train, basic_test,
+                                   centered_train, centered_test,
+                                   covariates_only_train, covariates_only_test,
+                                   covariates_only_centered_train, covariates_only_centered_test)
+
+  core_utils$save_hdf5(results, filename)
+}
+
+
 save_parameters_csv <- function(params, args, outpath) {
   timestamp <- as.character(Sys.time())
   parameters <- c(as.list(params), as.list(args), list(timestamp = timestamp))
@@ -93,27 +110,6 @@ build_model_eval_dict <- function(eval_obj) {
 }
 
 
-# # Build models section
-# build_models_dict <- function(basic_train, basic_test, basic_avg, basic_null,
-#                              centered_train, centered_test, centered_avg, centered_null) {
-#   list(
-#     basic = list(
-#       train = build_model_eval_dict(basic_train),
-#       test = build_model_eval_dict(basic_test),
-#       avg = build_model_eval_dict(basic_avg),
-#       null = build_model_eval_dict(basic_null)
-
-#     ),
-#     centered = list(
-#       train = build_model_eval_dict(centered_train),
-#       test = build_model_eval_dict(centered_test),
-#       avg = build_model_eval_dict(centered_avg),
-#       null = build_model_eval_dict(centered_null)
-#     )
-#   )
-# }
-
-
 # Build models section
 build_models_dict <- function(train_sl, test_sl, basic_train, basic_test, basic_avg, basic_null,
                              centered_train, centered_test, centered_avg, centered_null) {
@@ -135,6 +131,33 @@ build_models_dict <- function(train_sl, test_sl, basic_train, basic_test, basic_
       centered_avg = build_model_eval_dict(centered_avg),
       basic_null = build_model_eval_dict(basic_null),
       centered_null = build_model_eval_dict(centered_null)
+    )
+  )
+}
+
+
+# Build covariate-analysis model section
+build_models_cov_dict <- function(train_sl, test_sl, basic_train, basic_test,
+                                  centered_train, centered_test,
+                                  covariates_only_train, covariates_only_test,
+                                  covariates_only_centered_train, covariates_only_centered_test) {
+  list(
+    searchlight_id = train_sl$ID,
+    train = list(
+      vertex_indices = train_sl$vertex.idx,
+      subject_indices = train_sl$subj.idx,
+      basic = build_model_eval_dict(basic_train),
+      centered = build_model_eval_dict(centered_train),
+      covariates_only = build_model_eval_dict(covariates_only_train),
+      covariates_only_centered = build_model_eval_dict(covariates_only_centered_train)
+    ),
+    test = list(
+      vertex_indices = test_sl$vertex.idx,
+      subject_indices = test_sl$subj.idx,
+      basic = build_model_eval_dict(basic_test),
+      centered = build_model_eval_dict(centered_test),
+      covariates_only = build_model_eval_dict(covariates_only_test),
+      covariates_only_centered = build_model_eval_dict(covariates_only_centered_test)
     )
   )
 }
