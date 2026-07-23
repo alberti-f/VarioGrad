@@ -34,16 +34,15 @@ for H, s in H_scale:
     # Set bin edges along each dimension
     bins = []
     for x in locations_train.T:
-        nbins = np.ceil(x.ptp() / sl_side).astype("int32")
-        xmin = x.min() - ((sl_side * nbins) - x.ptp()) / 2
-        xmax = x.max() + ((sl_side * nbins) - x.ptp()) / 2
+        nbins = np.ceil(np.ptp(x) / sl_side).astype("int32")
+        xmin = x.min() - ((sl_side * nbins) - np.ptp(x)) / 2
+        xmax = x.max() + ((sl_side * nbins) - np.ptp(x)) / 2
         bins.append(np.linspace(xmin, xmax, nbins+1))
     
     # Assign vertices to bins
     srchlight_train = digitizedd(locations_train, bins)
     srchlight_train_id, srchlight_train_n = np.unique(srchlight_train, return_counts=True)
     low_occupancy = srchlight_train_n < min_vtx
-    
     
     # Remove scarcely populated bins
     if np.any(low_occupancy):

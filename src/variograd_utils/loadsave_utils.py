@@ -18,20 +18,24 @@ from variograd_utils import load_hdf5
 #         predicted[df["subject"], df["vertex"]] = df["pred"]
 #     return observed, predicted
 
+
 def load_predictions_arrays(filepaths, group, model_name, n_subjects, n_vertex, n_threads=10):
     df_dict = load_sl_preds(filepaths, group, model_name, n_threads=n_threads)
 
     preds_shape = [n_subjects, n_vertex]
     first_item = next(iter(df_dict.values()))["pred"]
+    first_item_shape = first_item.shape
     if first_item.ndim == 2:
-        preds_shape.append(100) #first_item.shape[1])
+        # preds_shape.append(100) #
+        preds_shape.append(first_item_shape[1])
         
     observed = np.full([n_subjects, n_vertex], np.nan, dtype=float)
     predicted = np.full(preds_shape, np.nan, dtype=float)
     variance = np.full([n_subjects, n_vertex], np.nan, dtype=float)
 
     for sl, df in df_dict.items():
-        if first_item.ndim == 2: df["pred"] = df["pred"][:, :100]
+        # if first_item.ndim == 2: df["pred"] = df["pred"][:, :100]
+        if first_item.ndim == 2: df["pred"] = df["pred"][:, :first_item_shape[1]]
         observed[df["subject"], df["vertex"]] = df["true"]
         predicted[df["subject"], df["vertex"]] = df["pred"]
         variance[df["subject"], df["vertex"]] = df["var"]
