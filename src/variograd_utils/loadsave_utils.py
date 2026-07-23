@@ -18,6 +18,7 @@ from variograd_utils import load_hdf5
 #         predicted[df["subject"], df["vertex"]] = df["pred"]
 #     return observed, predicted
 
+
 def load_predictions_arrays(filepaths, group, model_name, n_subjects, n_vertex, n_threads=10):
     df_dict = load_sl_preds(filepaths, group, model_name, n_threads=n_threads)
 
